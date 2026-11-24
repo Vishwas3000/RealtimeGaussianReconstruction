@@ -14,6 +14,7 @@ Every project decision, with its reason and what was rejected. Entries are never
 | D-006 | 2026-11-24 | Perception: SparseDrive-S + FlashOcc M0, offline on the 4090 | Proposed |
 | D-007 | 2026-11-24 | Mac runtime: ONNX Runtime + CoreML, FlashOcc + SparseDrive-S first | Proposed |
 | D-008 | 2026-11-24 | World-sim track: OmniRe → OccWorld → Epona | Proposed |
+| D-009 | 2026-11-25 | Phase 0 built: nuScenes-mini + Occ3D mini labels → replay files → Three.js renderer | Implemented |
 
 ## D-001: rebuild Tesla's 2021–22 explicit pipeline first
 - **Decision:** cameras → top-down vector space + occupancy + lanes → render, the stack Tesla described at AI Day 2021/22 and CVPR 2022.
@@ -66,3 +67,23 @@ Every project decision, with its reason and what was rejected. Entries are never
 - **Rejected:** Cosmos 2.5/3, OmniDreams, Vista (need more than 24 GB); GAIA (closed); STORM (no checkpoint, non-commercial); EmerNeRF (slow, stale); DrivingGaussian (code behind a form).
 - **Gotcha:** drivestudio's PLY export writes only points and colours, so a full 3DGS exporter is needed before any splat viewer can show the scene.
 - **Evidence:** research/04. **Decided by:** Claude (research agent). **Status:** Proposed.
+
+## D-009: phase 0 built on nuScenes-mini + Occ3D mini labels
+- **Decision:** `pipeline/nuscenes_to_frames.py` turns nuScenes `v1.0-mini` ground truth, the map expansion (v1.3) and
+  Occ3D-nuScenes labels into one replay file per scene (`pipeline/frame_schema.md`); `renderer/` plays them in
+  Three.js r170 (jsDelivr import map, no build step) served by `python -m http.server`.
+- **Occ3D source:** the official Google Drive folders (project page and the CVPR 2023 challenge "mini" folder) answered
+  "Quota exceeded" to anonymous downloads on 2026-11-25. The labels came from the Hugging Face mirror
+  `RoyYao233/occ3d-nuscenes-transfer` (`gts.tar.gz`, 2,737,816,708 bytes, trainval); only the 10 mini scenes were
+  extracted. Cross-checks: 404 frames, matching the official mini count; Occ3D car voxels fall 100% inside nuScenes
+  car boxes in all 10 scenes.
+- **Measured:** the grid is in the ego frame of the LIDAR_TOP keyframe with index (i, j, k) → (x, y, z), confirmed by
+  the car-box check (swapped axes give 0.3–9.1%). Occupied voxels are 1.3–7.1% of the 200×200×16 grid per scene
+  (8k–46k), which answers research/05 open question 4: instanced cubes are enough.
+- **Occupancy display:** static classes (others, manmade, vegetation) are re-voxelised into one world-aligned 0.4 m
+  grid, because each 2 Hz keyframe's grid sits in a different ego frame and drawing them in turn makes the world jump
+  by up to half a voxel every 0.5 s. Moving things come from the 12 Hz boxes, not from voxels. The default look is a
+  smooth surface: outward cell faces with shared corners, then Taubin smoothing (no scalar field needed, and
+  triangles stay ordered by when the car first saw them). Raw cubes remain a menu option.
+- **Rejected:** the Argoverse 2 interim plan (proposed while there was no nuScenes account; it has no occupancy labels).
+- **Decided by:** user (asked to build phase 0); details by Claude. **Status:** Implemented.

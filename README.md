@@ -41,6 +41,21 @@ So this project rebuilds the disclosed pipeline, then adds the world-simulation 
    Rerun runs alongside as the debug / ground-truth view
 ```
 
+## Run phase 0 (ground-truth replay)
+
+Data lives in `Dataset/` (git-ignored, non-commercial licences): nuScenes `v1.0-mini` and the map expansion (v1.3)
+extracted into `Dataset/nuscenes/`, and the Occ3D-nuScenes labels for the 10 mini scenes in `Dataset/occ3d/gts/`
+(source and checks: [D-009](docs/DECISIONS.md)).
+
+```
+python -m venv .venv
+.venv/Scripts/python -m pip install -r pipeline/requirements.txt     # macOS: .venv/bin/python
+.venv/Scripts/python pipeline/nuscenes_to_frames.py                  # writes renderer/public/data/*.json
+.venv/Scripts/python -m http.server 8765 --bind 127.0.0.1 --directory renderer
+```
+
+Then open http://127.0.0.1:8765. The replay format is documented in [`pipeline/frame_schema.md`](pipeline/frame_schema.md).
+
 ## Roadmap (proposed, waiting on your go-ahead)
 
 | Phase | Goal | Runs on | Done when | Needs from you |
