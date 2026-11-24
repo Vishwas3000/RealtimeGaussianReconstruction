@@ -1,0 +1,39 @@
+# drivestudio requirements ported to an RTX 50-series GPU (sm_120): Python 3.10, torch 2.7.1 + CUDA 12.8.
+# Install torch first:  pip install torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128
+# Changes from drivestudio's requirements.txt (commit e59bda4f):
+#   - torch 2.0.0+cu117 / torchvision 0.15.0+cu117 -> 2.7.1 / 0.22.1 + cu128 (cu117 has no sm_120 kernels)
+#   - xformers removed (listed upstream, never imported)
+#   - opencv-python capped below 4.12, whose wheels require numpy 2 (numpy stays at 1.23.1 because chumpy breaks on >= 1.24)
+#   - added transformers (recon/extract_sky_masks.py) and nuscenes-devkit (datasets/preprocess.py); the devkit is
+#     1.1.11 because 1.2.0 needs matplotlib >= 3.6, which clashes with drivestudio's matplotlib 3.5.3 pin
+timm==0.9.5
+pytorch_msssim==1.0.0
+
+omegaconf==2.3.0
+torchmetrics==0.10.3
+
+tensorboard==2.11.0
+wandb==0.15.8
+matplotlib==3.5.3
+plotly==5.13.1
+viser==0.2.1
+
+imageio
+imageio-ffmpeg
+scikit-image==0.20.0
+opencv-python<4.12
+
+open3d==0.16.0
+pyquaternion==0.9.9
+chumpy
+numpy==1.23.1
+kornia==0.7.2
+
+tqdm
+gdown
+
+nerfview==0.0.3
+lpips==0.1.4
+
+transformers>=4.40,<5
+nuscenes-devkit==1.1.11
