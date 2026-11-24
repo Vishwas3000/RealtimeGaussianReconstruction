@@ -70,5 +70,19 @@ Scene-0061 (`000`), 6 cameras at 1/3 resolution (≈533×300), 2,000-step smoke 
 | Splats at step 2,000 | background 1.35 M, vehicles 47 k, deformable 43 k |
 | Train PSNR | ≈20 dB |
 
-Splats keep densifying until step 15,000 (background) and 20,000 (objects). The 16 GB verdict therefore needs the full
-30,000-step run; at this speed that projects to ≈40 min plus the slowdown from a growing splat count.
+Full 30,000-step run, same scene and settings:
+
+| | |
+|---|---|
+| Training time | 1 h 13 min (0.146 s/step average; steps get slower as splats are added, ≈0.21 s/step mid-run) |
+| Peak PyTorch memory | 4.6 GB allocated (drivestudio's `max mem`), reached by step 15,000 and flat after |
+| Whole-GPU use | 4–10.5 GB during training, including other Windows programs |
+| Splats | background peaked at 2.08 M at step 15,000; 1.17 M after pruning |
+| Train PSNR | 23.3 dB at 10k, 25.3 at 15k, 26.0 at 25k, 26.8 at 30k |
+
+**Verdict:** OmniRe with all 6 nuScenes cameras at 1/3 resolution fits in 16 GB with large headroom.
+
+**Host RAM is the tighter limit.** The end-of-run video render (`do_evaluation`) holds every rendered frame of every
+camera in memory. On a 31 GB host, with WSL allowed up to ~15.5 GB, that coincided with Windows running critically low
+on memory and the run being stopped before the videos were written. The checkpoints were already saved. Re-render the
+videos from `checkpoint_final.pth` with other programs closed.

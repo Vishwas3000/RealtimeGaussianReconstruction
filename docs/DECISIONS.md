@@ -113,7 +113,10 @@ Every project decision, with its reason and what was rejected. Entries are never
   - whole-GPU peak 13.1 GB, including ≈3 GB used by other programs;
   - train PSNR ≈20 dB;
   - renders already resemble all 6 cameras.
-  The 16 GB verdict is pending a full 30k-step run, because splats densify until step 20,000.
+- **Full 30k-step run, same scene:** 1 h 13 min; peak 4.6 GB allocated; train PSNR 26.8 dB; background splats
+  peaked at 2.08 M and were pruned to 1.17 M. **Verdict:** it fits in 16 GB with large headroom.
+  Host RAM is the tighter limit: the run was stopped by Windows memory pressure during the end-of-run video render,
+  after the checkpoints were saved.
 - **Rejected:**
   - native Windows builds (pytorch3d, CUDA version mismatch);
   - a rented 24 GB RTX 4090 for now;
