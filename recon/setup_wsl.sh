@@ -39,7 +39,8 @@ python_env() {
   [ -d "$VENV" ] || python3.10 -m venv "$VENV"
   # shellcheck disable=SC1091
   source "$VENV/bin/activate"
-  pip install -q --upgrade pip setuptools wheel ninja
+  # setuptools < 70 still ships pkg_resources, which torchmetrics 0.10.3 (drivestudio's pin) imports.
+  pip install -q --upgrade pip wheel ninja "setuptools<70"
   pip install -q torch==2.7.1 torchvision==0.22.1 --index-url https://download.pytorch.org/whl/cu128
   # chumpy's setup.py imports pip, which pip's isolated build environment does not have.
   pip install -q --no-build-isolation chumpy

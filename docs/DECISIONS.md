@@ -15,6 +15,7 @@ Every project decision, with its reason and what was rejected. Entries are never
 | D-007 | 2026-11-24 | Mac runtime: ONNX Runtime + CoreML, FlashOcc + SparseDrive-S first | Proposed |
 | D-008 | 2026-11-24 | World-sim track: OmniRe → OccWorld → Epona | Proposed |
 | D-009 | 2026-11-25 | Phase 0 built: nuScenes-mini + Occ3D mini labels → replay files → Three.js renderer | Implemented |
+| D-010 | 2026-11-25 | OmniRe on the RTX 5070 Ti: WSL2 Ubuntu 22.04 + CUDA 12.8 + torch 2.7.1, no SMPL first | Implemented |
 
 ## D-001: rebuild Tesla's 2021–22 explicit pipeline first
 - **Decision:** cameras → top-down vector space + occupancy + lanes → render, the stack Tesla described at AI Day 2021/22 and CVPR 2022.
@@ -87,3 +88,34 @@ Every project decision, with its reason and what was rejected. Entries are never
   triangles stay ordered by when the car first saw them). Raw cubes remain a menu option.
 - **Rejected:** the Argoverse 2 interim plan (proposed while there was no nuScenes account; it has no occupancy labels).
 - **Decided by:** user (asked to build phase 0); details by Claude. **Status:** Implemented.
+
+## D-010: OmniRe runs on the RTX 5070 Ti through WSL2, without SMPL at first
+- **Decision:** reconstruct scenes with drivestudio's OmniRe (the user's choice of route) on this PC. Setup
+  (`recon/README.md`, `recon/setup_wsl.sh`):
+  - WSL2 Ubuntu 22.04 with CUDA toolkit 12.8 and torch 2.7.1 + cu128;
+  - gsplat 1.3.0, pytorch3d 0.7.8 and nvdiffrast rebuilt for sm_120 (`TORCH_CUDA_ARCH_LIST=12.0`);
+  - drivestudio at commit e59bda4f with no source changes.
+- **Why:**
+  - drivestudio pins torch 2.0 + CUDA 11.7, which has no Blackwell (sm_120) kernels.
+  - Its three compiled dependencies build reliably only on Linux.
+  - Windows' CUDA 13.1 would mismatch a cu128 torch.
+- **Departures from upstream:**
+  - **Sky masks** come from `recon/extract_sky_masks.py` (Hugging Face SegFormer-B5 Cityscapes), because the
+    upstream tool needs mmcv + torch 1.8.
+  - **No SMPL pedestrians yet:** `recon/configs/omnire_nuscenes_nosmpl.yaml` drops `SMPLNodes`, so pedestrians
+    become deformable Gaussians. SMPL needs the user's registration at smpl.is.tue.mpg.de.
+  - **Requirements:** xformers dropped (never imported); chumpy installed without build isolation; opencv < 4.12;
+    nuscenes-devkit 1.1.11 (1.2.0 needs matplotlib ≥ 3.6); setuptools < 70 (torchmetrics 0.10.3 imports
+    `pkg_resources`).
+- **Measured** (scene-0061, 6 cameras at 1/3 resolution, 2,000 steps):
+  - 0.081 s/step;
+  - peak PyTorch memory 3.11 GB allocated, 9.61 GB reserved;
+  - whole-GPU peak 13.1 GB, including ≈3 GB used by other programs;
+  - train PSNR ≈20 dB;
+  - renders already resemble all 6 cameras.
+  The 16 GB verdict is pending a full 30k-step run, because splats densify until step 20,000.
+- **Rejected:**
+  - native Windows builds (pytorch3d, CUDA version mismatch);
+  - a rented 24 GB RTX 4090 for now;
+  - drivestudio's mmcv sky-mask tool.
+- **Decided by:** user (OmniRe route, hardware first); setup by Claude. **Status:** Implemented.

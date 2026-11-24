@@ -6,6 +6,8 @@
 #   - opencv-python capped below 4.12, whose wheels require numpy 2 (numpy stays at 1.23.1 because chumpy breaks on >= 1.24)
 #   - added transformers (recon/extract_sky_masks.py) and nuscenes-devkit (datasets/preprocess.py); the devkit is
 #     1.1.11 because 1.2.0 needs matplotlib >= 3.6, which clashes with drivestudio's matplotlib 3.5.3 pin
+# torchmetrics 0.10.3 imports pkg_resources, which newer setuptools no longer ships
+setuptools<70
 timm==0.9.5
 pytorch_msssim==1.0.0
 
