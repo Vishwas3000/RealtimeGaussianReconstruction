@@ -236,15 +236,148 @@ def format_report(folder: Path, r: dict) -> str:
     return "\n".join(lines)
 
 
+# --- Multi-lens recordings (D-014): no ARKit poses; one video + CSV per lens, imu.csv, gps.csv ---------------------
+
+def frame_stats(times: list[float]) -> dict:
+    times = sorted(times)
+    if len(times) < 2:
+        return {"frames": len(times), "duration_s": 0.0, "fps": None, "gaps": 0, "missing_frames": 0}
+    dts = [b - a for a, b in zip(times, times[1:])]
+    median_dt = statistics.median(dts)
+    gaps = [dt for dt in dts if median_dt > 0 and dt > 1.5 * median_dt]
+    duration = times[-1] - times[0]
+    return {"frames": len(times), "duration_s": duration, "fps": (len(times) - 1) / duration if duration > 0 else None,
+            "gaps": len(gaps), "missing_frames": sum(max(0, round(dt / median_dt) - 1) for dt in gaps)}
+
+
+def nearest_gap_ms(reference: list[float], other: list[float]) -> float | None:
+    """Median gap between each reference frame and the other lens's nearest frame; under 1 ms means hardware sync."""
+    if not reference or not other:
+        return None
+    gaps = []
+    for t in reference:
+        i = bisect.bisect_left(other, t)
+        gaps.append(min(abs(other[j] - t) for j in (i - 1, i) if 0 <= j < len(other)))
+    return statistics.median(gaps) * 1000
+
+
+def gps_track(folder: Path, gps_max_accuracy_m: float, window_s: float = 5.0) -> dict:
+    fixes = []
+    for r in read_csv(folder / "gps.csv"):
+        t, lat, lon, acc = (to_float(r.get(k)) for k in ("timestamp", "latitude", "longitude", "horizontal_accuracy"))
+        if None not in (t, lat, lon, acc) and 0 < acc <= gps_max_accuracy_m:
+            fixes.append((t, lat, lon))
+    fixes.sort()
+    out: dict = {"gps_fixes_used": len(fixes)}
+    if len(fixes) >= 2:
+        sampled = [fixes[0]]  # every few seconds, so per-fix noise isn't summed as distance
+        for g in fixes[1:]:
+            if g[0] - sampled[-1][0] >= window_s:
+                sampled.append(g)
+        distance = sum(haversine_m(a[1], a[2], b[1], b[2]) for a, b in zip(sampled, sampled[1:]))
+        span = fixes[-1][0] - fixes[0][0]
+        out.update(gps_distance_m=distance, gps_mean_speed_kmh=distance / span * 3.6 if span > 0 else None,
+                   gps_loop_error_m=haversine_m(fixes[0][1], fixes[0][2], fixes[-1][1], fixes[-1][2]))
+    return out
+
+
+def analyse_multilens(folder: Path, info: dict, gps_max_accuracy_m: float = 20.0) -> dict:
+    lenses = info.get("lenses") or []
+    report: dict = {"mode": "multi-lens", "preset": info.get("preset", ""), "lenses": {}}
+    times: dict[str, list[float]] = {}
+    thermal: list[int] = []
+    exposures: list[float] = []
+    for lens in lenses:
+        rows = read_csv(folder / f"{lens}.csv")
+        times[lens] = sorted(x for x in (to_float(r.get("timestamp")) for r in rows) if x is not None)
+        stats = frame_stats(times[lens])
+        stats["intrinsics_rows"] = sum(1 for r in rows if to_float(r.get("fx")))
+        report["lenses"][lens] = stats
+        thermal += [int(v) for v in (r.get("thermal_state", "") for r in rows) if v.isdigit()]
+        exposures += [x for x in (to_float(r.get("exposure_time")) for r in rows) if x]
+    if lenses:
+        report["lens_offsets_ms"] = {f"{lenses[0]}-{lens}": nearest_gap_ms(times[lenses[0]], times[lens]) for lens in lenses[1:]}
+    report["max_thermal_state"] = max(thermal) if thermal else None
+    if exposures:
+        report["exposure_s_min_max"] = [min(exposures), max(exposures)]
+    imu = [x for x in (to_float(r.get("timestamp")) for r in read_csv(folder / "imu.csv")) if x is not None]
+    report["imu_samples"] = len(imu)
+    report["imu_rate_hz"] = (len(imu) - 1) / (imu[-1] - imu[0]) if len(imu) > 1 and imu[-1] > imu[0] else None
+    report.update(gps_track(folder, gps_max_accuracy_m))
+    return report
+
+
+def warnings_multilens(r: dict) -> list[str]:
+    w = []
+    if not r["lenses"]:
+        w.append("capture_info.json lists no lenses")
+    for lens, s in r["lenses"].items():
+        if s["frames"] < 2:
+            w.append(f"{lens}: no frames recorded")
+            continue
+        if s["fps"] is not None and s["fps"] < 25:
+            w.append(f"{lens}: only {s['fps']:.1f} fps")
+        if s["missing_frames"] > 0.01 * s["frames"]:
+            w.append(f"{lens}: {s['missing_frames']} frames missing (over 1%)")
+        if s["intrinsics_rows"] < s["frames"]:
+            w.append(f"{lens}: lens parameters missing on {s['frames'] - s['intrinsics_rows']} frames")
+    for pair, ms in (r.get("lens_offsets_ms") or {}).items():
+        if ms is not None and ms > 1.0:
+            w.append(f"lenses {pair} are {ms:.1f} ms apart: not hardware-synchronised")
+    if r.get("imu_rate_hz") is None or r["imu_rate_hz"] < 50:
+        w.append("motion sensors missing or under 50 Hz: offline positions need them")
+    if (r.get("max_thermal_state") or 0) >= 2:
+        w.append(f"the phone reached '{THERMAL_NAMES[min(3, r['max_thermal_state'])]}' heat")
+    if r.get("gps_fixes_used", 0) < 2:
+        w.append("fewer than 2 usable GPS fixes")
+    return w
+
+
+def format_multilens(folder: Path, r: dict) -> str:
+    lines = [f"Recording: {folder}", f"Mode:      multi-lens ({r['preset']})"]
+    for lens, s in r["lenses"].items():
+        fps = f"{s['fps']:.1f} fps" if s["fps"] else "fps n/a"
+        lines.append(f"{(lens + ':'):<10} {s['frames']:,} frames over {s['duration_s']:.1f} s ({fps}); {s['gaps']} gaps, "
+                     f"{s['missing_frames']} missing; lens parameters on {s['intrinsics_rows']:,}")
+    offsets = ", ".join(f"{k} {v:.2f} ms" for k, v in (r.get("lens_offsets_ms") or {}).items() if v is not None)
+    lines.append(f"Sync:      {offsets or 'n/a'}")
+    rate = f" at {r['imu_rate_hz']:.0f} Hz" if r.get("imu_rate_hz") else ""
+    lines.append(f"Motion:    {r['imu_samples']:,} samples{rate}")
+    if r.get("max_thermal_state") is not None:
+        lines.append(f"Heat:      worst state {THERMAL_NAMES[min(3, r['max_thermal_state'])]}")
+    if "exposure_s_min_max" in r:
+        lo, hi = r["exposure_s_min_max"]
+        lines.append(f"Exposure:  1/{1 / hi:.0f} s to 1/{1 / lo:.0f} s")
+    if r.get("gps_distance_m") is not None:
+        speed = f", mean {r['gps_mean_speed_kmh']:.0f} km/h" if r.get("gps_mean_speed_kmh") is not None else ""
+        lines.append(f"GPS:       {r['gps_fixes_used']} fixes; {r['gps_distance_m']:,.1f} m{speed}; start-to-end {r['gps_loop_error_m']:.1f} m")
+    else:
+        lines.append(f"GPS:       {r.get('gps_fixes_used', 0)} usable fixes")
+    lines.append("Warnings:  " + ("none" if not r["warnings"] else ""))
+    lines += [f"  - {w}" for w in r["warnings"]]
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Check a RoadCapture recording (frame rate, tracking, loop error, GPS scale).")
+    ap = argparse.ArgumentParser(description="Check a RoadCapture recording (ARKit or multi-lens).")
     ap.add_argument("folder", type=Path, help="a recording folder copied off the phone")
     ap.add_argument("--json", action="store_true", help="print the report as JSON")
     ap.add_argument("--gps-max-accuracy", type=float, default=20.0, help="ignore GPS fixes worse than this many metres")
     args = ap.parse_args(argv)
-    report = analyse(args.folder, gps_max_accuracy_m=args.gps_max_accuracy)
-    report["warnings"] = warnings_for(report)
-    print(json.dumps(report, indent=2) if args.json else format_report(args.folder, report))
+    info: dict = {}
+    try:
+        info = json.loads((args.folder / "capture_info.json").read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+    if info.get("mode") == "multi-lens":
+        report = analyse_multilens(args.folder, info, gps_max_accuracy_m=args.gps_max_accuracy)
+        report["warnings"] = warnings_multilens(report)
+        text = format_multilens(args.folder, report)
+    else:
+        report = analyse(args.folder, gps_max_accuracy_m=args.gps_max_accuracy)
+        report["warnings"] = warnings_for(report)
+        text = format_report(args.folder, report)
+    print(json.dumps(report, indent=2) if args.json else text)
     return 1 if report["warnings"] else 0
 
 

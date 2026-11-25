@@ -53,6 +53,26 @@ def write_capture(folder: Path, arkit_scale=1.0, drop_every=0, radius=50.0, spee
     return n
 
 
+def write_multilens(folder: Path, lens_offset_s=0.0, seconds=20, fps=30, imu_hz=100, speed=10.0):
+    """A multi-lens recording driving north in a straight line: two lenses, IMU, GPS at 1 Hz."""
+    import json
+    (folder / "capture_info.json").write_text(json.dumps(
+        {"mode": "multi-lens", "preset": "Wide + ultra-wide, 4K", "lenses": ["wide", "ultraWide"]}), encoding="utf-8")
+    header = "timestamp, frame, fx, fy, cx, cy, exposure_time, iso, thermal_state"
+    for lens, offset in (("wide", 0.0), ("ultraWide", lens_offset_s)):
+        rows = [header] + [f"{100 + i / fps + offset}, {i:06d}, 2800, 2800, 1920, 1080, 0.001, 200, 0"
+                           for i in range(seconds * fps + 1)]
+        (folder / f"{lens}.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+    imu = ["timestamp, a_x, a_y, a_z, alpha_x, alpha_y, alpha_z"] + [
+        f"{100 + i / imu_hz}, 0, -1, 0, 0, 0, 0" for i in range(seconds * imu_hz + 1)]
+    (folder / "imu.csv").write_text("\n".join(imu) + "\n", encoding="utf-8")
+    gps = ["timestamp, unix_time, latitude, longitude, altitude, horizontal_accuracy, vertical_accuracy, "
+           "speed, speed_accuracy, course, course_accuracy"] + [
+        f"{100 + s}, {1.7e9 + s}, {LAT0 + speed * s / M_PER_DEG:.8f}, {LON0:.8f}, 900, 3.0, 4.0, {speed}, 0.5, 0, 5"
+        for s in range(seconds + 1)]
+    (folder / "gps.csv").write_text("\n".join(gps) + "\n", encoding="utf-8")
+
+
 class CheckCaptureTest(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
@@ -120,6 +140,32 @@ class CheckCaptureTest(unittest.TestCase):
         self.assertFalse(any("ended near its start" in w for w in cc.warnings_for(r)))
         r.update(path_length_m=2000.0, loop_error_m=40.0, loop_error_pct=2.0)
         self.assertTrue(any("ended near its start" in w for w in cc.warnings_for(r)))
+
+    def multilens_report(self):
+        import json
+        info = json.loads((self.folder / "capture_info.json").read_text(encoding="utf-8"))
+        r = cc.analyse_multilens(self.folder, info)
+        r["warnings"] = cc.warnings_multilens(r)
+        return r
+
+    def test_multilens_in_sync(self):
+        write_multilens(self.folder)
+        r = self.multilens_report()
+        for lens in ("wide", "ultraWide"):
+            self.assertAlmostEqual(r["lenses"][lens]["fps"], 30, delta=0.1)
+            self.assertEqual(r["lenses"][lens]["intrinsics_rows"], r["lenses"][lens]["frames"])
+        self.assertLess(r["lens_offsets_ms"]["wide-ultraWide"], 0.01)
+        self.assertAlmostEqual(r["imu_rate_hz"], 100, delta=0.5)
+        self.assertAlmostEqual(r["gps_distance_m"], 200, delta=1)     # 10 m/s for 20 s
+        self.assertAlmostEqual(r["gps_mean_speed_kmh"], 36, delta=0.5)
+        self.assertEqual(r["warnings"], [])
+        self.assertIn("multi-lens", cc.format_multilens(self.folder, r))
+
+    def test_multilens_out_of_sync_is_flagged(self):
+        write_multilens(self.folder, lens_offset_s=0.008)  # free-running lenses, like the probe's separate inputs
+        r = self.multilens_report()
+        self.assertAlmostEqual(r["lens_offsets_ms"]["wide-ultraWide"], 8.0, delta=0.1)
+        self.assertTrue(any("not hardware-synchronised" in w for w in r["warnings"]))
 
     def test_plain_stray_scanner_recording_still_works(self):
         write_capture(self.folder)
