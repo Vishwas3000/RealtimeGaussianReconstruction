@@ -1,0 +1,20 @@
+name: capture-tools
+
+on:
+  push:
+    paths: ["capture/tools/**", ".github/workflows/capture-tools.yml"]
+  pull_request:
+    paths: ["capture/tools/**", ".github/workflows/capture-tools.yml"]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s capture/tools -v

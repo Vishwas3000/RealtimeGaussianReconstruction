@@ -16,7 +16,7 @@ Every project decision, with its reason and what was rejected. Entries are never
 | D-008 | 2026-11-24 | World-sim track: OmniRe → OccWorld → Epona | Proposed (OmniRe on one camera under D-009) |
 | D-009 | 2026-11-25 | Focus on one front camera (monocular reconstruction) for now | **Accepted** |
 | D-010 | 2026-11-25 | Monocular path M1 → M4, removing one crutch per step | Proposed |
-| D-011 | 2026-11-25 | Own capture: custom iPhone app with ARKit inside (main lens + poses), LiDAR off | Proposed |
+| D-011 | 2026-11-25 | Own capture: custom iPhone app with ARKit inside (main lens + poses), LiDAR off | **Accepted** |
 
 ## D-001: rebuild Tesla's 2021–22 explicit pipeline first
 - **Decision:** cameras → top-down vector space + occupancy + lanes → render, the stack Tesla described at AI Day 2021/22 and CVPR 2022.
@@ -146,4 +146,7 @@ Every project decision, with its reason and what was rejected. Entries are never
   to Apple's WWDC22 talk, but it loses the poses, is limited to multi-camera formats, has no hardware sync between
   separate lenses, and runs into heat limits. Revisit after the one-camera M3 works, with a probe app first
   (research/capture/01 §9).
-- **Evidence:** research/capture/. **Decided by:** Claude (research agents, spot-checked). **Status:** Proposed.
+- **Evidence:** research/capture/. **Decided by:** Claude (research agents, spot-checked); approved by the owner on
+  2026-11-25 ("yea you can start build this"). **Status:** Accepted.
+- **Implementation:** `capture/`, RoadCapture, a fork of Stray Scanner at ec3e1dc, plus `capture/tools/check_capture.py`
+  for the loop test. Builds and signs on the Mac; not yet run on a phone.

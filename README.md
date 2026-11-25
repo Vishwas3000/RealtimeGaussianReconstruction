@@ -7,6 +7,7 @@ and a realtime renderer draws it the way the FSD in-car display does. Research a
 - Research notes (every claim tagged with how far it can be trusted): [`research/`](research/README.md)
 - Decision log (each choice, why, what was rejected, status): [`docs/DECISIONS.md`](docs/DECISIONS.md)
 - Learning roadmap (what to understand, in what order, with hands-on builds): [`docs/LEARNING_ROADMAP.md`](docs/LEARNING_ROADMAP.md)
+- Capture app for our own road video (iPhone: main camera + ARKit poses + GPS) and its checker: [`capture/`](capture/README.md)
 
 ## What Tesla actually does (short version)
 
