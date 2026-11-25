@@ -67,9 +67,9 @@ frame of a test clip.
 - The maintainer's reply in issue #96 says random points would be used, and that disabling LiDAR "will lead to overfitted
   Gaussians".
 - **Fix for M2 and M3:** write metric depth, back-projected with the camera pose, into drivestudio's LiDAR slot
-  ("pseudo-LiDAR"). That gives both the starting points and a depth loss. Recorded as a correction to D-010.
+  ("pseudo-LiDAR"). That gives both the starting points and a depth loss. Recorded as a correction to D-012.
 
-## How to use this (Claude's recommendation; logged as D-011, Proposed)
+## How to use this (Claude's recommendation; logged as D-013, Proposed)
 
 1. **Capture app:** fork Stray Scanner (MIT; records ARKit video, LiDAR depth, poses, intrinsics and IMU). Add:
    - 4K30 (or 1440p60) recording;

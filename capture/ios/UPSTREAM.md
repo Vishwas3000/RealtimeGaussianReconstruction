@@ -5,7 +5,7 @@ This app is a fork of [Stray Scanner](https://github.com/strayrobots/scanner) by
 
 The unmodified import is its own commit in this repository, so `git diff` against it shows every RoadCapture change.
 
-## RoadCapture changes (TeslaRender D-011)
+## RoadCapture changes (TeslaRender D-013)
 
 - **Formats:** 4K30 (ARKit 6's 4K mode) or 1440p60. 4K falls back to 1440p60 on phones without it.
 - **Camera settings:**

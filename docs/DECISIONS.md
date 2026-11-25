@@ -6,18 +6,20 @@ Every project decision, with its reason and what was rejected. Entries are never
 
 | ID | Date | Decision | Status |
 |---|---|---|---|
-| D-001 | 2026-11-24 | Rebuild Tesla's 2021–22 explicit pipeline first | Proposed · parked by D-009 |
-| D-002 | 2026-11-24 | Data: nuScenes-mini + Occ3D-nuScenes mini | Proposed (CAM_FRONT only under D-009) |
-| D-003 | 2026-11-24 | Renderer: Three.js (WebGL) in the browser; Rerun for debugging | Proposed · parked by D-009 |
-| D-004 | 2026-11-24 | Build the renderer first on ground-truth replay | Proposed · parked by D-009 |
-| D-005 | 2026-11-24 | One interface: per-frame `frame.json`, renderer interpolates at 60 fps | Proposed · parked by D-009 |
-| D-006 | 2026-11-24 | Perception: SparseDrive-S + FlashOcc M0, offline on the 4090 | Proposed · parked by D-009 |
-| D-007 | 2026-11-24 | Mac runtime: ONNX Runtime + CoreML, FlashOcc + SparseDrive-S first | Proposed · parked by D-009 |
-| D-008 | 2026-11-24 | World-sim track: OmniRe → OccWorld → Epona | Proposed (OmniRe on one camera under D-009) |
-| D-009 | 2026-11-25 | Focus on one front camera (monocular reconstruction) for now | **Accepted** |
-| D-010 | 2026-11-25 | Monocular path M1 → M4, removing one crutch per step | Proposed |
-| D-011 | 2026-11-25 | Own capture: custom iPhone app with ARKit inside (main lens + poses), LiDAR off | **Accepted** |
-| D-012 | 2026-11-25 | Add a multi-lens capture mode (no ARKit); poses in post-processing from IMU + GPS; keep ARKit mode as the reference | **Accepted** |
+| D-001 | 2026-11-24 | Rebuild Tesla's 2021–22 explicit pipeline first | Proposed |
+| D-002 | 2026-11-24 | Data: nuScenes-mini + Occ3D-nuScenes mini | Proposed |
+| D-003 | 2026-11-24 | Renderer: Three.js (WebGL) in the browser; Rerun for debugging | Proposed |
+| D-004 | 2026-11-24 | Build the renderer first on ground-truth replay | Proposed |
+| D-005 | 2026-11-24 | One interface: per-frame `frame.json`, renderer interpolates at 60 fps | Proposed |
+| D-006 | 2026-11-24 | Perception: SparseDrive-S + FlashOcc M0, offline on the 4090 | Proposed |
+| D-007 | 2026-11-24 | Mac runtime: ONNX Runtime + CoreML, FlashOcc + SparseDrive-S first | Proposed |
+| D-008 | 2026-11-24 | World-sim track: OmniRe → OccWorld → Epona | Proposed |
+| D-009 | 2026-11-25 | Phase 0 built: nuScenes-mini + Occ3D mini labels → replay files → Three.js renderer | Implemented |
+| D-010 | 2026-11-25 | OmniRe on the RTX 5070 Ti: WSL2 Ubuntu 22.04 + CUDA 12.8 + torch 2.7.1, no SMPL first | Implemented |
+| D-011 | 2026-11-25 | Focus on one front camera (monocular reconstruction) for now | **Accepted** |
+| D-012 | 2026-11-25 | Monocular path M1 → M4, removing one crutch per step | Proposed |
+| D-013 | 2026-11-25 | Own capture: custom iPhone app with ARKit inside (main lens + poses), LiDAR off | **Accepted** |
+| D-014 | 2026-11-25 | Add a multi-lens capture mode (no ARKit); poses in post-processing from IMU + GPS; keep ARKit mode as the reference | **Accepted** |
 
 ## D-001: rebuild Tesla's 2021–22 explicit pipeline first
 - **Decision:** cameras → top-down vector space + occupancy + lanes → render, the stack Tesla described at AI Day 2021/22 and CVPR 2022.
@@ -71,7 +73,61 @@ Every project decision, with its reason and what was rejected. Entries are never
 - **Gotcha:** drivestudio's PLY export writes only points and colours, so a full 3DGS exporter is needed before any splat viewer can show the scene.
 - **Evidence:** research/04. **Decided by:** Claude (research agent). **Status:** Proposed.
 
-## D-009: focus on one front camera (monocular reconstruction) for now
+## D-009: phase 0 built on nuScenes-mini + Occ3D mini labels
+- **Decision:** `pipeline/nuscenes_to_frames.py` turns nuScenes `v1.0-mini` ground truth, the map expansion (v1.3) and
+  Occ3D-nuScenes labels into one replay file per scene (`pipeline/frame_schema.md`); `renderer/` plays them in
+  Three.js r170 (jsDelivr import map, no build step) served by `python -m http.server`.
+- **Occ3D source:** the official Google Drive folders (project page and the CVPR 2023 challenge "mini" folder) answered
+  "Quota exceeded" to anonymous downloads on 2026-11-25. The labels came from the Hugging Face mirror
+  `RoyYao233/occ3d-nuscenes-transfer` (`gts.tar.gz`, 2,737,816,708 bytes, trainval); only the 10 mini scenes were
+  extracted. Cross-checks: 404 frames, matching the official mini count; Occ3D car voxels fall 100% inside nuScenes
+  car boxes in all 10 scenes.
+- **Measured:** the grid is in the ego frame of the LIDAR_TOP keyframe with index (i, j, k) → (x, y, z), confirmed by
+  the car-box check (swapped axes give 0.3–9.1%). Occupied voxels are 1.3–7.1% of the 200×200×16 grid per scene
+  (8k–46k), which answers research/05 open question 4: instanced cubes are enough.
+- **Occupancy display:** static classes (others, manmade, vegetation) are re-voxelised into one world-aligned 0.4 m
+  grid, because each 2 Hz keyframe's grid sits in a different ego frame and drawing them in turn makes the world jump
+  by up to half a voxel every 0.5 s. Moving things come from the 12 Hz boxes, not from voxels. The default look is a
+  smooth surface: outward cell faces with shared corners, then Taubin smoothing (no scalar field needed, and
+  triangles stay ordered by when the car first saw them). Raw cubes remain a menu option.
+- **Rejected:** the Argoverse 2 interim plan (proposed while there was no nuScenes account; it has no occupancy labels).
+- **Decided by:** user (asked to build phase 0); details by Claude. **Status:** Implemented.
+
+## D-010: OmniRe runs on the RTX 5070 Ti through WSL2, without SMPL at first
+- **Decision:** reconstruct scenes with drivestudio's OmniRe (the user's choice of route) on this PC. Setup
+  (`recon/README.md`, `recon/setup_wsl.sh`):
+  - WSL2 Ubuntu 22.04 with CUDA toolkit 12.8 and torch 2.7.1 + cu128;
+  - gsplat 1.3.0, pytorch3d 0.7.8 and nvdiffrast rebuilt for sm_120 (`TORCH_CUDA_ARCH_LIST=12.0`);
+  - drivestudio at commit e59bda4f with no source changes.
+- **Why:**
+  - drivestudio pins torch 2.0 + CUDA 11.7, which has no Blackwell (sm_120) kernels.
+  - Its three compiled dependencies build reliably only on Linux.
+  - Windows' CUDA 13.1 would mismatch a cu128 torch.
+- **Departures from upstream:**
+  - **Sky masks** come from `recon/extract_sky_masks.py` (Hugging Face SegFormer-B5 Cityscapes), because the
+    upstream tool needs mmcv + torch 1.8.
+  - **No SMPL pedestrians yet:** `recon/configs/omnire_nuscenes_nosmpl.yaml` drops `SMPLNodes`, so pedestrians
+    become deformable Gaussians. SMPL needs the user's registration at smpl.is.tue.mpg.de.
+  - **Requirements:** xformers dropped (never imported); chumpy installed without build isolation; opencv < 4.12;
+    nuscenes-devkit 1.1.11 (1.2.0 needs matplotlib ≥ 3.6); setuptools < 70 (torchmetrics 0.10.3 imports
+    `pkg_resources`).
+- **Measured** (scene-0061, 6 cameras at 1/3 resolution, 2,000 steps):
+  - 0.081 s/step;
+  - peak PyTorch memory 3.11 GB allocated, 9.61 GB reserved;
+  - whole-GPU peak 13.1 GB, including ≈3 GB used by other programs;
+  - train PSNR ≈20 dB;
+  - renders already resemble all 6 cameras.
+- **Full 30k-step run, same scene:** 1 h 13 min; peak 4.6 GB allocated; train PSNR 26.8 dB; background splats
+  peaked at 2.08 M and were pruned to 1.17 M. **Verdict:** it fits in 16 GB with large headroom.
+  Host RAM is the tighter limit: the run was stopped by Windows memory pressure during the end-of-run video render,
+  after the checkpoints were saved.
+- **Rejected:**
+  - native Windows builds (pytorch3d, CUDA version mismatch);
+  - a rented 24 GB RTX 4090 for now;
+  - drivestudio's mmcv sky-mask tool.
+- **Decided by:** user (OmniRe route, hardware first); setup by Claude. **Status:** Implemented.
+
+## D-011: focus on one front camera (monocular reconstruction) for now
 - **Decision:** reconstruct the scene from a single forward-facing camera. Surround-camera work waits.
 - **Why:** the owner's call (2026-11-25): "for now can we focus on single camera. so we just reconstruct the scene using
   monocular camera." It also brings other benefits:
@@ -79,9 +135,11 @@ Every project decision, with its reason and what was rejected. Entries are never
   - it matches a single phone or dashcam on Indian roads (research/market);
   - it matches all four papers the owner sent (research/papers).
 - **What it changes:**
-  - Reconstruction (D-008's first step) comes first, on one camera. That answers the open "FSD screen or world simulator
-    first?" question for now.
-  - D-001 and D-003–D-007, the FSD-display track built on surround cameras, are parked.
+  - New work goes to reconstruction from one camera, D-008's first step.
+  - Kept as they are, because the owner's other machine built them a few hours earlier the same day:
+    - the phase-0 replay renderer (D-009);
+    - drivestudio/OmniRe on the RTX 5070 Ti, 6 cameras (D-010).
+  - Step M1 of D-012 reuses that drivestudio setup with `1cams.yaml`.
   - D-002's nuScenes-mini still applies, using CAM_FRONT only.
 - **Costs to expect** [inference]:
   - one camera gives no metric scale on its own;
@@ -90,11 +148,12 @@ Every project decision, with its reason and what was rejected. Entries are never
   - nothing behind or beside the car is ever seen.
 - **Decided by:** the owner. **Status:** Accepted.
 
-## D-010: monocular path M1 → M4, removing one crutch per step
+## D-012: monocular path M1 → M4, removing one crutch per step
 - **Decision:**
   - **M1, baseline, no new code.** drivestudio's OmniRe and Street Gaussians with
     `configs/datasets/nuscenes/1cams.yaml`: CAM_FRONT only, with the dataset's poses, LiDAR and 3D boxes, on one
-    nuScenes-mini scene, on the rented 4090. Run `3cams.yaml` on the same scene to measure what one camera loses.
+    nuScenes-mini scene, on the RTX 5070 Ti (drivestudio already runs there, D-010)
+    or the rented 4090. Run `3cams.yaml` on the same scene to measure what one camera loses.
   - **M2, camera only.**
     - Set `load_lidar: False` and seed the Gaussians from monocular depth instead (Instant4D: back-project, voxel-prune,
       short schedule, no densification).
@@ -128,7 +187,7 @@ Every project decision, with its reason and what was rejected. Entries are never
     instead of switching LiDAR off. Evidence: research/capture/README.md.
 - **Decided by:** Claude. **Status:** Proposed.
 
-## D-011: own capture is a custom iPhone app with ARKit inside
+## D-013: own capture is a custom iPhone app with ARKit inside
 - **Decision:** for M3, record with a fork of Stray Scanner (MIT), which records ARKit video, LiDAR depth, poses,
   intrinsics and IMU. Additions:
   - main lens at 4K30 or 1440p60;
@@ -152,7 +211,7 @@ Every project decision, with its reason and what was rejected. Entries are never
 - **Implementation:** `capture/`, RoadCapture, a fork of Stray Scanner at ec3e1dc, plus `capture/tools/check_capture.py`
   for the loop test. Builds and signs on the Mac; not yet run on a phone.
 
-## D-012: add a multi-lens capture mode; keep ARKit mode as the reference
+## D-014: add a multi-lens capture mode; keep ARKit mode as the reference
 - **Decision:** add a second recording mode to RoadCapture, using AVFoundation's multi-camera session instead of ARKit:
   - the LiDAR camera (the main lens plus depth), the ultra-wide, and the telephoto if the phone allows all three;
   - motion sensors at full rate, GPS, and the factory lens calibration;

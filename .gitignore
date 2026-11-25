@@ -1,3 +1,15 @@
 .DS_Store
-capture/data/
+
+# datasets (nuScenes, Occ3D): non-commercial licence, never commit
+Dataset/
+dataset/
+
+# python
+.venv/
 __pycache__/
+
+# generated replay files
+renderer/public/data/
+
+# RoadCapture recordings and probe reports: GPS tracks, faces, number plates
+capture/data/

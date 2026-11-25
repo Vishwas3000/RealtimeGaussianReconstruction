@@ -5,7 +5,7 @@
 //  Created by Kenneth Blomqvist on 11/28/20.
 //  Copyright © 2020 Stray Robots. All rights reserved.
 //
-//  RoadCapture changes (TeslaRender D-011): 4K30 / 1440p60 formats, focus pinned far, a Lock button
+//  RoadCapture changes (TeslaRender D-013): 4K30 / 1440p60 formats, focus pinned far, a Lock button
 //  (white balance + short shutter), HDR off, optional LiDAR, GPS logging, a status line, and the
 //  screen kept awake while this view is open.
 //
@@ -23,7 +23,7 @@ let FpsUserDefaultsKey: String = "FPS"
 let CaptureModeUserDefaultsKey: String = "CaptureMode"
 let DepthUserDefaultsKey: String = "DepthEnabled"
 
-/// The two recording formats D-011 asks for.
+/// The two recording formats D-013 asks for.
 enum CaptureMode: Int, CaseIterable {
     case uhd30 = 0  // 3840x2160 at 30 fps (ARKit 6 4K mode)
     case hd60 = 1   // 1920x1440 at 60 fps (ARKit's default)

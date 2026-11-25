@@ -1,0 +1,4 @@
+nuscenes-devkit==1.2.0
+numpy
+shapely
+pyquaternion

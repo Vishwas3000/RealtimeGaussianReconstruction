@@ -5,7 +5,7 @@
 //  Created by Kenneth Blomqvist on 1/2/21.
 //  Copyright © 2021 Stray Robots. All rights reserved.
 //
-//  RoadCapture changes (TeslaRender D-011): depth is optional; adds frames.csv (tracking state,
+//  RoadCapture changes (TeslaRender D-013): depth is optional; adds frames.csv (tracking state,
 //  exposure, lock, heat per frame), gps.csv and capture_info.json.
 //
 

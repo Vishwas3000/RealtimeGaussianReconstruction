@@ -2,7 +2,7 @@
 
 Researched 2026-11-25. Web research only: nothing was downloaded, installed or run; drivestudio's code was read on GitHub,
 not executed. Question: with the phone behind the windshield at 20–100 km/h on Indian roads, can its lenses, LiDAR, ARKit
-poses and GPS feed D-010's M3? Which lens/LiDAR combinations iOS allows: [01-iphone-15-pro-max-capture.md](01-iphone-15-pro-max-capture.md).
+poses and GPS feed D-012's M3? Which lens/LiDAR combinations iOS allows: [01-iphone-15-pro-max-capture.md](01-iphone-15-pro-max-capture.md).
 Tags: `[primary]` = paper, official doc, repo or measured test; `[secondary]` = article, forum or search snippet;
 `[UNCERTAIN]` = not confirmed; `[inference]` = my reasoning or arithmetic.
 
@@ -15,7 +15,7 @@ Tags: `[primary]` = paper, official doc, repo or measured test; `[secondary]` = 
 | Raw video + IMU for offline VIO | Yes, as fallback and cross-check | Spectacular Rec logs video and IMU `[primary]`. Rolling-shutter and blur compensation need the same velocities `[primary]` |
 | GPS (dual-frequency, incl. NavIC) | Yes, for scale and drift checks over a few hundred metres or more | Metre-level fixes, so no per-frame poses `[inference]`. No measured in-car iPhone accuracy found |
 | LiDAR depth (ARKit `sceneDepth`) | **No** at 5–50 m. At most a ≤5 m scale check | Apple: "up to 5 meters" `[primary]`. Sparse dots `[primary]`. Sunlight hurts `[secondary]`. Through a windshield: untested |
-| Ultra-wide (13 mm, 120°) | Later, optional | More roadside coverage, no OIS `[primary]`. But more hood and cabin, distortion, less detail `[inference]`. Outside D-009's one camera |
+| Ultra-wide (13 mm, 120°) | Later, optional | More roadside coverage, no OIS `[primary]`. But more hood and cabin, distortion, less detail `[inference]`. Outside D-011's one camera |
 | Wide + ultra-wide as stereo | No | 19.24 mm baseline (from Apple's drawing, §5) → ~1.4 px disparity at 20 m `[inference]` |
 | 5× telephoto (120 mm) | No | ~16° horizontal view, 5× the vibration blur in pixels `[inference]` |
 | Dolby Vision HDR video | Avoid | Tone mapping varies with the scene, which breaks colour consistency across frames `[inference]` |
@@ -192,7 +192,7 @@ against COLMAP.
   - plus a `DATASETS_CONFIG` entry (`camera_name`, `original_size`, `egocar_visible`) in `datasets/dataset_meta.py`.
 - **Gotcha** `[primary: code; not run]`: `DrivingDataset.__init__` runs
   `assert self.pixel_source is not None and self.lidar_source is not None` unconditionally (~line 98 on main), and
-  `load_lidar: False` makes the LiDAR source `None`, so construction should fail. That also hits D-010's M2 as written.
+  `load_lidar: False` makes the LiDAR source `None`, so construction should fail. That also hits D-012's M2 as written.
   The maintainer says random points are used instead, which "will lead to overfitted Gaussians"
   `[primary: issue #96, 2025-08-27]`. Default seeding is `from_lidar: num_samples: 800_000` plus 100k near and 100k far
   random points `[primary: configs/omnire.yaml]`.
@@ -237,7 +237,7 @@ against COLMAP.
    real drive, a 5-minute closed loop at 20–60 km/h validates ARKit in the owner's car. The ARKit-versus-Camera-app
    trade-off is in file 01.
 4. **Loader:** emit drivestudio's nuScenes layout with pseudo-LiDAR, and expect `load_lidar: False` to crash (§7). This is
-   roughly the same work as D-010 planned, with one more input file.
+   roughly the same work as D-012 planned, with one more input file.
 5. Still one crutch per step: dataset poses become phone VIO poses. ViPE-only poses become an "M3b" if ARKit fails.
 
 ## 10. Dead ends

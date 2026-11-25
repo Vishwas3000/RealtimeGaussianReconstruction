@@ -1,6 +1,6 @@
 # 01: What iOS can capture on an iPhone 15 Pro Max (cameras, LiDAR, ARKit)
 
-Researched 2026-11-25 for D-010 step M3 (reconstructing the owner's own road video). This was web research only: nothing
+Researched 2026-11-25 for D-012 step M3 (reconstructing the owner's own road video). This was web research only: nothing
 was installed or run, and **no probe app has been run on the phone**. Whether the data helps reconstruction is covered
 in a separate file. Tags: `[primary]` = Apple docs, a WWDC transcript, a forum post by Apple staff, or the app's own
 repo or store page; `[secondary]` = a third-party article, a non-Apple forum post or a search snippet;
@@ -22,7 +22,7 @@ The phone has a 48 MP Main (24 mm, ƒ/1.78), a 12 MP Ultra Wide (13 mm, ƒ/2.2, 
 
 So [inference]: ARKit is the only path that gives poses, and it takes the camera for itself. You get one RGB stream
 from the wide camera plus 256×192 LiDAR depth. Two or more cameras means AVFoundation, no poses, and an offline
-SLAM front-end (D-010 already plans ViPE or MegaSaM).
+SLAM front-end (D-012 already plans ViPE or MegaSaM).
 
 ## 2. Several rear cameras at once (`AVCaptureMultiCamSession`)
 
@@ -203,7 +203,7 @@ SLAM front-end (D-010 already plans ViPE or MegaSaM).
    `isAutoFocusEnabled = false`; a custom short exposure with fixed ISO, chosen on site; white balance locked;
    `videoHDRAllowed = false`.
 4. Log per frame: timestamp, image (HEVC), `transform`, `intrinsics` (it still moves), `exposureDuration`, `exifData`,
-   tracking state, depth + confidence. Also log CoreMotion at its maximum rate, and CoreLocation fixes so D-010's GPS
+   tracking state, depth + confidence. Also log CoreMotion at its maximum rate, and CoreLocation fixes so D-012's GPS
    speed can check the scale.
 5. Fork Stray Scanner (MIT) instead of starting from zero. It lacks 4K, the locks, EXIF and GPS.
 

@@ -133,7 +133,7 @@ itself, STORM, DGGT and VGD (research/07) remain the closest open baselines.
 - **C3G:** which GPU its timings were measured on.
 - **Mono4DGS-HDR:** whether its code runs as released.
 
-## Update 2026-11-25: the owner switched to one camera (docs/DECISIONS.md D-009)
+## Update 2026-11-25: the owner switched to one camera (docs/DECISIONS.md D-011)
 
 The verdicts above were judged against the surround-camera goal. With one camera, two of the papers move up:
 - **Instant4D** becomes a candidate pipeline for M3, the owner's own video.

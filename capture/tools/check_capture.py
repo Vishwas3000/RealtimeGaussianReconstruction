@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check a RoadCapture recording before using it (TeslaRender D-011).
+"""Check a RoadCapture recording before using it (TeslaRender D-013).
 
 Reports the frame rate and dropped frames, ARKit tracking health, heat, the start-to-end error of
 the ARKit trajectory (meaningful when you drive a closed loop), and ARKit's scale against GPS.

@@ -63,7 +63,7 @@ That matches the 19.24 mm read from the 15 Pro Max drawing (02 §5). So the ster
   wide lens.
 - **Recommended 4K format:** 3840×2160 at 30 fps. Scene depth is supported.
 
-## What it means for D-012 `[inference]`
+## What it means for D-014 `[inference]`
 
 - **Best two-lens set: `dualWide`.** Wide and ultra-wide at full 4K, hardware-synchronised, heat cost 0.68
   (sustainable). It loses LiDAR, because the LiDAR camera also needs the wide lens.

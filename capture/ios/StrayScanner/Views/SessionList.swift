@@ -47,7 +47,7 @@ class SessionListViewModel: ObservableObject {
 struct SessionList: View {
     @ObservedObject var viewModel = SessionListViewModel()
     @State private var showingInfo = false
-    @State private var showingProbe = false  // RoadCapture: camera probe (D-012)
+    @State private var showingProbe = false  // RoadCapture: camera probe (D-014)
 
     var body: some View {
         ZStack {

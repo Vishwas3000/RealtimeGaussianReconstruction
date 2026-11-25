@@ -1,6 +1,6 @@
 # RoadCapture: recording our own road video
 
-Decision D-011 ([docs/DECISIONS.md](../docs/DECISIONS.md)). An iPhone app that records the main camera with ARKit's
+Decision D-013 ([docs/DECISIONS.md](../docs/DECISIONS.md)). An iPhone app that records the main camera with ARKit's
 per-frame position in metres, plus GPS, motion sensors and per-frame exposure, for roadmap step M3. It is a fork of
 Stray Scanner (MIT). What changed: [ios/UPSTREAM.md](ios/UPSTREAM.md). Output files: [ios/docs/format.md](ios/docs/format.md).
 Why it is built this way: [research/capture/](../research/capture/README.md).
