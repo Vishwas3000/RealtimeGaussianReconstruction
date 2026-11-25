@@ -200,8 +200,9 @@ def warnings_for(r: dict) -> list[str]:
         w.append("fewer than 2 usable GPS fixes, so the scale was not checked")
     elif r.get("scale_arkit_over_gps") is None:
         w.append("no GPS window was long enough to check the scale (drive further)")
+    # Only for real drives: on a short handheld clip a few centimetres is already "over 1%".
     if (r.get("gps_loop_error_m") is not None and r["gps_loop_error_m"] < 15
-            and (r.get("loop_error_pct") or 0) > 1):
+            and r["path_length_m"] >= 100 and (r.get("loop_error_pct") or 0) > 1):
         w.append(f"GPS says the drive ended near its start, but ARKit's end is {r['loop_error_m']:.1f} m away "
                  f"({r['loop_error_pct']:.2f}% of the path)")
     return w

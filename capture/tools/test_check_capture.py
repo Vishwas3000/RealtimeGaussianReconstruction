@@ -113,6 +113,14 @@ class CheckCaptureTest(unittest.TestCase):
         write_capture(self.folder, quat=pitched_down(8))
         self.assertFalse(self.report()["warnings"])
 
+    def test_short_handheld_clip_has_no_loop_warning(self):
+        # Numbers from the first real recording: 0.7 m of hand movement, ending 0.08 m from the start.
+        r = {"frames": 146, "missing_frames": 1, "path_length_m": 0.7, "loop_error_m": 0.08,
+             "loop_error_pct": 10.3, "gps_fixes_used": 2, "scale_arkit_over_gps": None, "gps_loop_error_m": 0.0}
+        self.assertFalse(any("ended near its start" in w for w in cc.warnings_for(r)))
+        r.update(path_length_m=2000.0, loop_error_m=40.0, loop_error_pct=2.0)
+        self.assertTrue(any("ended near its start" in w for w in cc.warnings_for(r)))
+
     def test_plain_stray_scanner_recording_still_works(self):
         write_capture(self.folder)
         (self.folder / "frames.csv").unlink()
