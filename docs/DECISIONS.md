@@ -17,6 +17,7 @@ Every project decision, with its reason and what was rejected. Entries are never
 | D-009 | 2026-11-25 | Focus on one front camera (monocular reconstruction) for now | **Accepted** |
 | D-010 | 2026-11-25 | Monocular path M1 → M4, removing one crutch per step | Proposed |
 | D-011 | 2026-11-25 | Own capture: custom iPhone app with ARKit inside (main lens + poses), LiDAR off | **Accepted** |
+| D-012 | 2026-11-25 | Add a multi-lens capture mode (no ARKit); poses in post-processing from IMU + GPS; keep ARKit mode as the reference | Proposed |
 
 ## D-001: rebuild Tesla's 2021–22 explicit pipeline first
 - **Decision:** cameras → top-down vector space + occupancy + lanes → render, the stack Tesla described at AI Day 2021/22 and CVPR 2022.
@@ -150,3 +151,30 @@ Every project decision, with its reason and what was rejected. Entries are never
   2026-11-25 ("yea you can start build this"). **Status:** Accepted.
 - **Implementation:** `capture/`, RoadCapture, a fork of Stray Scanner at ec3e1dc, plus `capture/tools/check_capture.py`
   for the loop test. Builds and signs on the Mac; not yet run on a phone.
+
+## D-012: add a multi-lens capture mode; keep ARKit mode as the reference
+- **Decision:** add a second recording mode to RoadCapture, using AVFoundation's multi-camera session instead of ARKit:
+  - the LiDAR camera (the main lens plus depth), the ultra-wide, and the telephoto if the phone allows all three;
+  - motion sensors at full rate, GPS, and the factory lens calibration;
+  - focus, exposure and white balance locked; stabilisation and distortion correction off.
+
+  Poses are computed afterwards with visual-inertial odometry from the logged motion sensors, with GPS for scale. The
+  ARKit mode stays, and the same route is driven once in each mode so the ARKit trajectory checks the offline poses.
+  First step: a probe button that records which lens combinations, formats and heat costs the iPhone 15 Pro allows.
+- **Why:**
+  - The owner (2026-11-25): "i dont think arkit have a lot of weight for this goal… we can also do this in the post
+    processing. but the multi lens will be of a lot of help."
+  - Reconstruction is offline, so live poses aren't required.
+  - The ultra-wide (120°) sees the roadside the main lens misses, and keeps features in view longer, which also helps
+    offline poses.
+- **Limits:**
+  - Camera-only offline poses drift on forward driving video (9–25 m ATE on KITTI, research/capture/02). That is why the
+    motion sensors and GPS must be logged.
+  - Main + ultra-wide stereo is useless past about 10 m (lenses about 2 cm apart).
+  - The telephoto and LiDAR add little on roads.
+  - Separately added lenses are not hardware-synchronised (WWDC19).
+  - Multi-camera formats are capped below full resolution.
+  - Heat limits recordings to 10–15 minutes above a system-pressure cost of 1.
+- **Rejected:** dropping the ARKit mode. It works today and gives the reference trajectory.
+- **Evidence:** research/capture/01 §2 and §9, research/capture/02. **Decided by:** the owner's direction, with this
+  shape proposed by Claude. **Status:** Proposed.
