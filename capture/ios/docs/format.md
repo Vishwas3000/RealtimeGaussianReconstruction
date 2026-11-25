@@ -6,14 +6,17 @@ This document describes the data format recorded by the app.
 The collected datasets are each contained in a folder, named after a random hash, for example `71de12f9`. A dataset folder has the following directory structure:
 
 ```
+capture_info.json    (RoadCapture)
 camera_matrix.csv
 odometry.csv
+frames.csv           (RoadCapture)
+gps.csv              (RoadCapture)
 imu.csv
-depth/
+depth/               (only when LiDAR is on)
   - 000000.png
   - 000001.png
   - ...
-confidence/
+confidence/          (only when LiDAR is on)
   - 000000.png
   - 000001.png
   - ...
@@ -24,7 +27,16 @@ distortion/          (optional, present when lens distortion data is available)
 rgb.mp4
 ```
 
-`rgb.mp4` is an HEVC encoded video, which contains the recorded data from the iPhone's camera.
+**Clock.** Every `timestamp` column, in every CSV, is in seconds on the phone's system uptime clock (the clock
+behind `ARFrame.timestamp` and Core Motion). So rows from different files can be matched by time.
+
+**Frame order.** `rgb.mp4`, `odometry.csv`, `frames.csv` and `depth/` hold the same frames in the same order: the
+Nth video frame is the row whose `frame` is N. Frames the phone could not encode in time are dropped from all of them
+together, which shows up as a gap in `timestamp`.
+
+`rgb.mp4` is an HEVC encoded video, which contains the recorded data from the iPhone's camera. RoadCapture records
+3840×2160 at 30 fps (4K30) or 1920×1440 at 60 fps (1440p60), at about 0.2 bit per pixel, and stamps each frame with
+its capture time, so playback speed is correct at either rate.
 
 The `depth/` directory contains the depth maps. One `.png` file per rgb frame. Each of these is a 16 bit grayscale png image. They have a height of 192 elements and width of 256 elements. The values are the measured depth in millimeters, for that pixel position. In [OpenCV](https://docs.opencv.org/4.5.5/), these can be read with `cv2.imread(depth_frame_path, -1)`.
 
@@ -66,3 +78,37 @@ The `imu.csv` file contains timestamps, linear acceleration readings and angular
 | alpha\_y | Rotation in rad/s around the y-axis |
 | alpha\_z | Rotation in rad/s around the z-axis |
 
+
+## Added by RoadCapture
+
+`frames.csv` has one row per saved frame, in the same order as `odometry.csv`:
+
+| Field | Meaning |
+|---|---|
+| timestamp, frame | As in `odometry.csv` |
+| tracking_state | `normal`, `limited` or `not_available` (ARKit's world tracking) |
+| tracking_reason | When limited: `initializing`, `excessive_motion`, `insufficient_features` or `relocalizing` |
+| exposure_duration | `ARCamera.exposureDuration`, seconds |
+| exposure_offset | `ARCamera.exposureOffset`, EV |
+| exif_exposure_time, exif_iso, exif_brightness | From `ARFrame.exifData` (iOS 16+); empty when absent |
+| camera_locked | 1 after the Lock button was pressed (white balance locked, shutter ≤ 1/1000 s) |
+| thermal_state | `ProcessInfo.thermalState`: 0 nominal, 1 fair, 2 serious, 3 critical |
+| has_depth | 1 when this frame has LiDAR depth |
+
+`gps.csv` has one row per Core Location fix while recording:
+
+| Field | Meaning |
+|---|---|
+| timestamp | Uptime-clock seconds (the fix's wall-clock time moved onto the uptime clock) |
+| unix_time | The fix's own time, seconds since 1970 |
+| latitude, longitude | Degrees (WGS84) |
+| altitude | Metres |
+| horizontal_accuracy, vertical_accuracy | Metres; negative means invalid |
+| speed, speed_accuracy | m/s; negative means invalid |
+| course, course_accuracy | Degrees from true north; negative means invalid |
+
+`capture_info.json` records the app version, device model, iOS version, capture mode, image size, camera and saved
+frame rates, whether LiDAR depth was on, and whether the camera was locked when recording started.
+
+**Privacy.** `gps.csv` is where you drove, and the video shows faces and number plates. Don't commit recordings to a
+public repository.

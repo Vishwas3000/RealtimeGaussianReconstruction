@@ -23,20 +23,24 @@ class VideoEncoder {
     private var videoWriter: AVAssetWriter?
     private var videoWriterInput: AVAssetWriterInput?
     private var videoAdapter: AVAssetWriterInputPixelBufferAdaptor?
-    private let timeScale = CMTimeScale(60)
+    // RoadCapture: 600 ticks/s fits 30 and 60 fps; frames are stamped with their real capture time.
+    private let timeScale = CMTimeScale(600)
     public let width: CGFloat
     public let height: CGFloat
+    private let fps: Int
     private let systemBootedAt: TimeInterval
     private var done: Bool = false
     private var previousFrame: Int = -1
+    private var firstFrameTime: TimeInterval?
     public var filePath: URL
     public var status: EncodingStatus = EncodingStatus.allGood
 
-    init(file: URL, width: CGFloat, height: CGFloat) {
+    init(file: URL, width: CGFloat, height: CGFloat, fps: Int = 60) {
         self.systemBootedAt = ProcessInfo.processInfo.systemUptime
         self.filePath = file
         self.width = width
         self.height = height
+        self.fps = max(1, fps)
         initializeFile()
     }
 
@@ -56,10 +60,16 @@ class VideoEncoder {
     private func initializeFile() {
         do {
             videoWriter = try AVAssetWriter(outputURL: self.filePath, fileType: .mp4)
+            // RoadCapture: ~0.2 bit per pixel (≈50 Mbit/s at 4K30) so compression doesn't eat street detail.
+            let bitRate = Int(Double(self.width * self.height) * Double(self.fps) * 0.2)
             let settings: [String : Any] = [
                 AVVideoCodecKey: AVVideoCodecType.hevc,
                 AVVideoWidthKey: self.width,
-                AVVideoHeightKey: self.height
+                AVVideoHeightKey: self.height,
+                AVVideoCompressionPropertiesKey: [
+                    AVVideoAverageBitRateKey: bitRate,
+                    AVVideoExpectedSourceFrameRateKey: self.fps,
+                ],
             ]
             let input = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
             input.expectsMediaDataInRealTime = true
@@ -81,7 +91,10 @@ class VideoEncoder {
 
     private func encode(frame: VideoEncoderInput, frameNumber: Int) {
         let image: CVPixelBuffer = frame.buffer
-        let time = CMTime(value: Int64(frameNumber), timescale: timeScale)
+        // The old frameNumber/60 timing assumed a 60 fps camera, so 4K30 played back at double speed.
+        let start = firstFrameTime ?? frame.time
+        firstFrameTime = start
+        let time = CMTime(seconds: frame.time - start, preferredTimescale: timeScale)
         let success = videoAdapter!.append(image, withPresentationTime: time)
         if !success {
             print("Pixel buffer could not be appended. \(videoWriter!.error!.localizedDescription)")
