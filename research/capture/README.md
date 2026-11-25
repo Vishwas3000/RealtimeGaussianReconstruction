@@ -8,6 +8,7 @@ phone yet.
 |---|---|
 | [01-iphone-15-pro-max-capture.md](01-iphone-15-pro-max-capture.md) | What iOS can capture: lens and LiDAR combinations, ARKit, calibration, existing apps, and a probe-app spec |
 | [02-phone-data-for-driving-reconstruction.md](02-phone-data-for-driving-reconstruction.md) | Whether that data helps a driving reconstruction: LiDAR range, ARKit in a car, rolling shutter, heat, drivestudio loader |
+| [03-probe-iphone15pro.md](03-probe-iphone15pro.md) | **Measured on the owner's iPhone 15 Pro:** which lens sets run together, at what resolution, heat cost and sync |
 
 ## Answer
 
