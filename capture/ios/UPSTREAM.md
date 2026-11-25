@@ -20,4 +20,7 @@ The unmodified import is its own commit in this repository, so `git diff` agains
   - the recording status no longer reports success after a video error;
   - the screen stays awake while recording;
   - the preview matches the format's aspect ratio.
+- **Gallery:** each recording in the list has a first-frame thumbnail and "5s · 4K30 · LiDAR". Its page has the video
+  (sized to the recording), a "Frames + depth" tab that steps through the camera frames with their colour-coded LiDAR
+  depth, and the recording's facts (format, length, ARKit path, tracking, GPS, phone).
 - **Identity:** display name RoadCapture, bundle ID `app.roadcapture.ios`, signing team `GH5YVSN865`.

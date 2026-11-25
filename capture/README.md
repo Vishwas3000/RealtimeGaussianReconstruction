@@ -52,6 +52,16 @@ Record clips of 5–10 minutes, stopping and starting new ones rather than doing
 - Tracking is `normal` on more than 95 % of frames.
 - No frames are missing, and heat never reaches "serious".
 
+## Look at recordings on the phone
+
+Every recording stays in the app (its sandbox) until you delete it. The first screen, **Recordings**, lists them with a
+thumbnail and "length · format · LiDAR". Tap one to see:
+- **Video:** the recording, played back.
+- **Frames + depth:** a slider steps through every frame. You see the camera image and, if LiDAR was on, its depth map
+  (red near → blue at 5 m or more, black = no reading), with the depth at the centre of the frame.
+- **Facts:** format, length, ARKit path, tracking, LiDAR frames, GPS fixes, phone and iOS version.
+- **Share** (a zip of the folder) and **Delete**.
+
 ## Copy recordings off the phone
 
 Each recording is a folder named by a short hash.
@@ -83,8 +93,8 @@ repository, and blur faces and plates before sharing anything (research/market/0
 - **The mount check rests on two readings of the code:** that Stray Scanner's odometry quaternions use OpenCV camera
   axes (from its `q_AC` flip), and that ARKit's world y axis points up. The first real recording should come out
   "upright" when the phone is mounted correctly.
-- **4K with LiDAR:** whether ARKit delivers depth in 4K mode on your phone is unknown. `has_depth` in `frames.csv` will
-  show it.
+- **4K with LiDAR works** on the iPhone 15 Pro: the first test clip had depth on all 146 frames, at 256×144. One frame of
+  147 was dropped, so leave LiDAR off unless you need it.
 - **No lens distortion:** ARKit gives none for the rear camera (research/capture/01 §4). Per-frame intrinsics are
   pinhole only.
 - **Lock in dim light** can push ISO high and add noise.

@@ -13,6 +13,8 @@ phone yet.
 
 **Note (2026-11-25): the phone actually used is an iPhone 15 Pro, not a 15 Pro Max.** It has the same main camera,
 LiDAR and ARKit. Only the telephoto differs (3× instead of 5×), and we don't use it, so nothing below changes.
+**Measured on that phone the same day:** ARKit delivers LiDAR depth in 4K30 mode, as a 256×144 map (16:9), on every
+frame of a test clip.
 
 **Build a custom app, but keep ARKit inside it.**
 - **ARKit's poses are the most valuable thing the phone gives us.** ARKit tracked a 3 km city drive to 2.68 m of

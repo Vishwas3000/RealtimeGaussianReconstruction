@@ -38,7 +38,7 @@ together, which shows up as a gap in `timestamp`.
 3840×2160 at 30 fps (4K30) or 1920×1440 at 60 fps (1440p60), at about 0.2 bit per pixel, and stamps each frame with
 its capture time, so playback speed is correct at either rate.
 
-The `depth/` directory contains the depth maps. One `.png` file per rgb frame. Each of these is a 16 bit grayscale png image. They have a height of 192 elements and width of 256 elements. The values are the measured depth in millimeters, for that pixel position. In [OpenCV](https://docs.opencv.org/4.5.5/), these can be read with `cv2.imread(depth_frame_path, -1)`.
+The `depth/` directory contains the depth maps. One `.png` file per rgb frame. Each of these is a 16 bit grayscale png image. They are 256×192 in 4:3 formats such as 1440p60, and 256×144 in 16:9 4K30 (measured on an iPhone 15 Pro, iOS 27.2.1). The values are the measured depth in millimeters, for that pixel position. In [OpenCV](https://docs.opencv.org/4.5.5/), these can be read with `cv2.imread(depth_frame_path, -1)`.
 
 The `confidence/` directory contains confidence maps corresponding to each depth map. They are grayscale png files encoding 192 x 256 element matrices. The values are either 0, 1 or 2. A higher value means a higher confidence.
 
