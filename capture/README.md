@@ -5,7 +5,8 @@ per-frame position in metres, plus GPS, motion sensors and per-frame exposure, f
 Stray Scanner (MIT). What changed: [ios/UPSTREAM.md](ios/UPSTREAM.md). Output files: [ios/docs/format.md](ios/docs/format.md).
 Why it is built this way: [research/capture/](../research/capture/README.md).
 
-**Status (2026-11-25):** builds and signs on the Mac (Xcode 26.2). It has not been run on a phone yet.
+**Status (2026-11-25):** builds and signs on the Mac (Xcode 26.2). Installed and launched on the owner's iPhone 15 Pro
+(iOS 27.2.1).
 
 ## Install
 
@@ -78,7 +79,7 @@ repository, and blur faces and plates before sharing anything (research/market/0
 
 ## Known limits
 
-- **Not yet run on a phone.** The first recording will show whether everything below holds.
+- **The first road recording** will show whether everything below holds.
 - **The mount check rests on two readings of the code:** that Stray Scanner's odometry quaternions use OpenCV camera
   axes (from its `q_AC` flip), and that ARKit's world y axis points up. The first real recording should come out
   "upright" when the phone is mounted correctly.

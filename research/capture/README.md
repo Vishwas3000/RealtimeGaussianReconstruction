@@ -11,6 +11,9 @@ phone yet.
 
 ## Answer
 
+**Note (2026-11-25): the phone actually used is an iPhone 15 Pro, not a 15 Pro Max.** It has the same main camera,
+LiDAR and ARKit. Only the telephoto differs (3× instead of 5×), and we don't use it, so nothing below changes.
+
 **Build a custom app, but keep ARKit inside it.**
 - **ARKit's poses are the most valuable thing the phone gives us.** ARKit tracked a 3 km city drive to 2.68 m of
   end-point error.
