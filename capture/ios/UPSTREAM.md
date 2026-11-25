@@ -23,4 +23,13 @@ The unmodified import is its own commit in this repository, so `git diff` agains
 - **Gallery:** each recording in the list has a first-frame thumbnail and "5s · 4K30 · LiDAR". Its page has the video
   (sized to the recording), a "Frames + depth" tab that steps through the camera frames with their colour-coded LiDAR
   depth, and the recording's facts (format, length, ARKit path, tracking, GPS, phone).
+- **Camera probe** (`Helpers/CameraProbe.swift`): records which lens combinations, formats and heat costs the phone
+  allows, plus the factory calibration between lenses. Opened from the aperture button, or with the `-probe` launch
+  argument.
+- **Multi-lens mode** (`Helpers/MultiCamRecorder.swift`, `Views/MultiLensRecordView.swift`):
+  - Apple's combined camera (dual-wide or triple) records each lens to its own HEVC file and per-frame CSV, with
+    motion sensors and GPS, and no ARKit.
+  - The gallery shows every lens.
+  - `-multilens-smoke` records 8 s on launch, for testing from the Mac.
+- **Docs fix:** `imu.csv` acceleration is in g, not m/s² as the upstream docs said (measured |a| ≈ 1.003 at rest).
 - **Identity:** display name RoadCapture, bundle ID `app.roadcapture.ios`, signing team `GH5YVSN865`.

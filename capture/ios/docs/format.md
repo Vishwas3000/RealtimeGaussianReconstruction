@@ -71,9 +71,9 @@ The `imu.csv` file contains timestamps, linear acceleration readings and angular
 | Field | <div style="width: 500px">Meaning</div> |
 |---|---|
 | timestamp | Timestamp in seconds |
-| a\_x | Acceleration in m/s^2 in x direction |
-| a\_y | Acceleration in m/s^2 in y direction |
-| a\_z | Acceleration in m/s^2 in z direction |
+| a\_x | Acceleration in g (Core Motion's unit) in x direction |
+| a\_y | Acceleration in g (Core Motion's unit) in y direction |
+| a\_z | Acceleration in g (Core Motion's unit) in z direction |
 | alpha\_x | Rotation in rad/s around the x-axis |
 | alpha\_y | Rotation in rad/s around the y-axis |
 | alpha\_z | Rotation in rad/s around the z-axis |
@@ -112,3 +112,49 @@ frame rates, whether LiDAR depth was on, and whether the camera was locked when 
 
 **Privacy.** `gps.csv` is where you drove, and the video shows faces and number plates. Don't commit recordings to a
 public repository.
+
+**IMU units (RoadCapture correction).** The upstream table said m/s², but the code writes Core Motion's raw
+accelerometer values, which are in g. A phone at rest reads |a| ≈ 1.0: 1.003 was measured on a real recording. Multiply
+by 9.80665 for m/s². The motion sensors run at 100 Hz on the iPhone 15 Pro, measured.
+
+## Multi-lens recordings (RoadCapture, D-014)
+
+Made with the **Multi-lens** button. There is no ARKit, so no `odometry.csv` and no depth. Camera positions are computed
+afterwards from the videos plus `imu.csv`.
+
+```
+capture_info.json    mode "multi-lens", preset, lenses, size, factory extrinsics between lenses, settings
+wide.mp4             one HEVC video per lens, ~0.2 bit/pixel
+wide.csv             one row per frame in that video
+ultraWide.mp4
+ultraWide.csv
+tele.mp4, tele.csv   only with the "3 lenses · 1080p" preset
+imu.csv              same format as above (g, rad/s), 100 Hz
+gps.csv              same format as above
+```
+
+| Preset | Lenses | Size | Sync between lenses (probe) |
+|---|---|---|---|
+| 2 lenses · 4K (default) | wide, ultraWide | 3840×2160, 30 fps | hardware, 0.11 ms |
+| 3 lenses · 1080p | wide, ultraWide, tele | 1920×1080, 30 fps | hardware, 0.2–0.4 ms |
+
+`<lens>.csv` columns:
+
+| Field | Meaning |
+|---|---|
+| timestamp | The frame's capture time (sample-buffer PTS), seconds on the host/uptime clock, the same clock as `imu.csv` and `gps.csv` |
+| frame | Index of the frame in `<lens>.mp4` (frames the encoder couldn't take are dropped from both) |
+| fx, fy, cx, cy | That frame's intrinsics in pixels (`kCMSampleBufferAttachmentKey_CameraIntrinsicMatrix`) |
+| exposure_time, iso | From the frame's EXIF attachment |
+| thermal_state | 0 nominal … 3 critical |
+
+**Timing.** Each `<lens>.mp4` starts at that lens's first frame, so frame N plays at `timestamp[N] - timestamp[0]`. Match
+frames across lenses by `timestamp`, not by index.
+
+**Camera settings.**
+- Auto focus, exposure and white balance, with the shutter capped at 1/1000 s (ISO rises instead). **Lock** freezes all
+  three.
+- Video stabilisation is off.
+- Apple's geometric distortion correction is left **on**, so frames are close to pinhole and match the per-frame
+  intrinsics. `capture_info.json` records `gdc_enabled`.
+- `extrinsics` in `capture_info.json` is the factory rotation and translation (mm) between each pair of lenses.

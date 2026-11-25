@@ -56,6 +56,7 @@ struct SessionDetailView: View {
     @State private var shareError: String?
     @State private var summary: RecordingSummary?
     @State private var tab = 0
+    @State private var lens = ""  // multi-lens recordings: which lens the player shows
 
     let defaultUrl = URL(fileURLWithPath: "")
 
@@ -67,17 +68,29 @@ struct SessionDetailView: View {
         VStack(spacing: 16) {
             Picker("View", selection: $tab) {
                 Text("Video").tag(0)
-                Text((summary?.depthFrames ?? 0) > 0 ? "Frames + depth" : "Frames").tag(1)
+                Text((summary?.depthFrames ?? 0) > 0 ? "Frames + depth" : ((summary?.lenses.count ?? 0) > 1 ? "All lenses" : "Frames")).tag(1)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal)
 
             if tab == 0 {
+                if let lenses = summary?.lenses, lenses.count > 1 {
+                    Picker("Lens", selection: $lens) {
+                        ForEach(lenses, id: \.self) { Text($0).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                }
                 VideoPlayer(player: player ?? AVPlayer(url: defaultUrl))
                     .aspectRatio(summary?.aspect ?? 4.0 / 3.0, contentMode: .fit)
                     .onAppear {
                         if player == nil {
                             player = AVPlayer(url: recording.absoluteRgbPath() ?? defaultUrl)
+                        }
+                    }
+                    .onChange(of: lens) { _, name in
+                        if let directory = recording.directoryPath(), !name.isEmpty {
+                            player = AVPlayer(url: directory.appendingPathComponent("\(name).mp4"))
                         }
                     }
             } else if let summary = summary, let directory = recording.directoryPath() {
@@ -119,7 +132,9 @@ struct SessionDetailView: View {
         .background(Color("BackgroundColor"))
         .task {
             guard summary == nil, let directory = recording.directoryPath() else { return }
-            summary = await Task.detached { RecordingSummary.load(from: directory) }.value
+            let loaded = await Task.detached { RecordingSummary.load(from: directory) }.value
+            summary = loaded
+            lens = loaded.lenses.first ?? ""
         }
         .sheet(isPresented: $showingShareSheet) {
             if let packageURL = tempPackageURL {
@@ -184,7 +199,12 @@ struct FrameViewer: View {
     var body: some View {
         let count = summary.frameTimes.count
         VStack(spacing: 10) {
-            frame(loader.rgb, aspect: summary.aspect)
+            ForEach(loader.sources, id: \.name) { source in
+                if loader.sources.count > 1 {
+                    Text(source.name).font(.caption).foregroundColor(.secondary)
+                }
+                frame(loader.images[source.name], aspect: summary.aspect)
+            }
             if summary.depthFrames > 0 {
                 // 256x192 in 4:3 formats, 256x144 in 4K (16:9): use the map's own shape.
                 frame(loader.depth, aspect: loader.depth.map { Double($0.size.width / $0.size.height) } ?? summary.aspect)
@@ -239,29 +259,41 @@ struct FrameViewer: View {
 }
 
 final class FrameLoader: ObservableObject {
-    @Published var rgb: UIImage?
+    @Published var images: [String: UIImage] = [:]
     @Published var depth: UIImage?
     @Published var depthText = ""
+    let sources: [FrameSource]
     private let directory: URL
     private let summary: RecordingSummary
-    private let generator: AVAssetImageGenerator
+    private let generators: [String: AVAssetImageGenerator]
 
     init(directory: URL, summary: RecordingSummary) {
         self.directory = directory
         self.summary = summary
-        generator = AVAssetImageGenerator(asset: AVURLAsset(url: directory.appendingPathComponent("rgb.mp4")))
-        generator.requestedTimeToleranceBefore = .zero // the exact frame, so it lines up with its depth map
-        generator.requestedTimeToleranceAfter = .zero
-        generator.maximumSize = CGSize(width: 1280, height: 1280)
+        sources = summary.sources(in: directory)
+        var generators: [String: AVAssetImageGenerator] = [:]
+        for source in sources {
+            let generator = AVAssetImageGenerator(asset: AVURLAsset(url: source.video))
+            generator.requestedTimeToleranceBefore = .zero // the exact frame, so lenses and depth line up
+            generator.requestedTimeToleranceAfter = .zero
+            generator.maximumSize = CGSize(width: 1280, height: 1280)
+            generators[source.name] = generator
+        }
+        self.generators = generators
     }
 
     @MainActor
     func load(_ index: Int) async {
-        guard index < summary.frameTimes.count else { return }
-        // RoadCapture stamps video frames with their capture time, so frame i plays at t_i - t_0.
-        let time = CMTime(seconds: summary.frameTimes[index] - summary.frameTimes[0], preferredTimescale: 600)
-        if let result = try? await generator.image(at: time), !Task.isCancelled {
-            rgb = UIImage(cgImage: result.image)
+        guard let reference = sources.first, index < reference.times.count else { return }
+        let t = reference.times[index]
+        for source in sources where !source.times.isEmpty {
+            // Each lens's frame nearest to the reference time; a lens's movie starts at its own first frame.
+            let j = RecordingSummary.nearest(source.times, t)
+            let time = CMTime(seconds: source.times[j] - source.times[0], preferredTimescale: 600)
+            if let generator = generators[source.name], let result = try? await generator.image(at: time) {
+                if Task.isCancelled { return }
+                images[source.name] = UIImage(cgImage: result.image)
+            }
         }
         guard summary.depthFrames > 0 else { return }
         let url = directory.appendingPathComponent("depth").appendingPathComponent(String(format: "%06d.png", index))
@@ -298,13 +330,19 @@ struct RecordingFacts: View {
 // BEGIN RecordingSummary (Foundation only, so the Mac check can run this exact code)
 /// What a recording folder holds, read from capture_info.json and the CSVs.
 struct RecordingSummary {
+    var mode = "arkit"                 // "arkit" or "multi-lens" (capture_info.json)
+    var preset = ""
     var width = 0
     var height = 0
     var cameraFps = 0
     var captureMode = ""
     var deviceModel = ""
     var iosVersion = ""
-    var frameTimes: [Double] = []      // odometry.csv timestamps, in video order
+    var frameTimes: [Double] = []      // odometry.csv timestamps (multi-lens: the first lens), in video order
+    var lenses: [String] = []          // multi-lens: lens names, wide first
+    var lensTimes: [String: [Double]] = [:]
+    var lensOffsetMs: Double?          // multi-lens: median gap between the first two lenses' frames
+    var imuSamples = 0
     var pathLength = 0.0               // metres along ARKit's trajectory
     var trackingNormal: Double?        // share of frames with normal tracking (frames.csv)
     var gpsFixes = 0
@@ -313,8 +351,38 @@ struct RecordingSummary {
     var duration: Double { (frameTimes.last ?? 0) - (frameTimes.first ?? 0) }
     var aspect: Double { width > 0 && height > 0 ? Double(width) / Double(height) : 4.0 / 3.0 }
 
+    /// The videos to step through: one per lens for multi-lens recordings, else rgb.mp4.
+    func sources(in directory: URL) -> [FrameSource] {
+        if mode == "multi-lens" {
+            return lenses.map { FrameSource(name: $0, video: directory.appendingPathComponent("\($0).mp4"), times: lensTimes[$0] ?? []) }
+        }
+        return [FrameSource(name: "camera", video: directory.appendingPathComponent("rgb.mp4"), times: frameTimes)]
+    }
+
+    /// Index of the time closest to t in a sorted list (binary search).
+    static func nearest(_ times: [Double], _ t: Double) -> Int {
+        var lo = 0, hi = times.count - 1
+        while lo < hi {
+            let mid = (lo + hi) / 2
+            if times[mid] < t { lo = mid + 1 } else { hi = mid }
+        }
+        if lo > 0 && abs(times[lo - 1] - t) <= abs(times[lo] - t) { return lo - 1 }
+        return lo
+    }
+
     var facts: [(String, String)] {
         var f: [(String, String)] = []
+        if mode == "multi-lens" {
+            f.append(("Mode", "Multi-lens" + (preset.isEmpty ? "" : " (\(preset))")))
+            f.append(("Lenses", lenses.joined(separator: ", ")))
+            if width > 0 { f.append(("Format", "\(width)×\(height) at \(cameraFps) fps, each lens")) }
+            f.append(("Length", String(format: "%.1f s · %d frames per lens", duration, frameTimes.count)))
+            if let offset = lensOffsetMs { f.append(("Lens sync", String(format: "%.2f ms apart (median)", offset))) }
+            f.append(("Motion", "\(imuSamples) sensor samples"))
+            f.append(("GPS", "\(gpsFixes) fixes"))
+            if !deviceModel.isEmpty { f.append(("Phone", "\(deviceModel) · iOS \(iosVersion)")) }
+            return f
+        }
         if width > 0 {
             f.append(("Format", "\(width)×\(height) at \(cameraFps) fps" + (captureMode.isEmpty ? "" : " (\(captureMode))")))
         }
@@ -333,13 +401,31 @@ struct RecordingSummary {
 
     static func load(from directory: URL) -> RecordingSummary {
         var s = RecordingSummary()
-        if let info = captureInfo(directory) {
+        let info = captureInfo(directory)
+        if let info = info {
             s.width = info["width"] as? Int ?? 0
             s.height = info["height"] as? Int ?? 0
             s.cameraFps = info["camera_fps"] as? Int ?? 0
             s.captureMode = info["capture_mode"] as? String ?? ""
             s.deviceModel = info["device_model"] as? String ?? ""
             s.iosVersion = info["ios_version"] as? String ?? ""
+        }
+        if info?["mode"] as? String == "multi-lens" {
+            s.mode = "multi-lens"
+            s.preset = info?["preset"] as? String ?? ""
+            s.lenses = info?["lenses"] as? [String] ?? []
+            for lens in s.lenses {
+                s.lensTimes[lens] = rows(directory.appendingPathComponent("\(lens).csv")).compactMap { Double($0["timestamp"] ?? "") }.sorted()
+            }
+            s.frameTimes = s.lensTimes[s.lenses.first ?? ""] ?? []
+            if s.lenses.count > 1, let a = s.lensTimes[s.lenses[0]], let b = s.lensTimes[s.lenses[1]], !a.isEmpty, !b.isEmpty {
+                let gaps = a.map { t in abs(b[nearest(b, t)] - t) }.sorted()
+                s.lensOffsetMs = gaps[gaps.count / 2] * 1000
+            }
+            s.gpsFixes = rows(directory.appendingPathComponent("gps.csv")).count
+            let imu = (try? String(contentsOf: directory.appendingPathComponent("imu.csv"), encoding: .utf8)) ?? ""
+            s.imuSamples = max(0, imu.split(whereSeparator: \.isNewline).count - 1)
+            return s
         }
         var last: (Double, Double, Double)?
         for row in rows(directory.appendingPathComponent("odometry.csv")) {
@@ -368,8 +454,12 @@ struct RecordingSummary {
     static func rowDetails(directory: URL, duration: Double) -> String {
         var parts = [String(format: "%ds", Int(duration.rounded()))]
         if let info = captureInfo(directory) {
-            if let mode = info["capture_mode"] as? String { parts.append(mode) }
-            if info["depth_enabled"] as? Bool == true { parts.append("LiDAR") }
+            if info["mode"] as? String == "multi-lens" {
+                parts.append(info["preset"] as? String ?? "multi-lens")
+            } else {
+                if let mode = info["capture_mode"] as? String { parts.append(mode) }
+                if info["depth_enabled"] as? Bool == true { parts.append("LiDAR") }
+            }
         }
         return parts.joined(separator: " · ")
     }
@@ -394,6 +484,13 @@ struct RecordingSummary {
             return row
         }
     }
+}
+
+/// One video to step through, with its frame timestamps.
+struct FrameSource {
+    let name: String
+    let video: URL
+    let times: [Double]
 }
 // END RecordingSummary
 

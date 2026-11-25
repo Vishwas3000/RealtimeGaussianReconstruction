@@ -48,6 +48,8 @@ struct SessionList: View {
     @ObservedObject var viewModel = SessionListViewModel()
     @State private var showingInfo = false
     @State private var showingProbe = false  // RoadCapture: camera probe (D-014)
+    @State private var showingSmoke = false  // RoadCapture: "-multilens-smoke" records 8 s on launch
+    private static var smokeRan = false
 
     var body: some View {
         ZStack {
@@ -106,18 +108,33 @@ struct SessionList: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 50.0)
                 }
-                HStack {
+                // RoadCapture: two ways to record. ARKit = main lens + live poses (+ LiDAR);
+                // Multi-lens = several lenses in sync, poses computed afterwards (D-014).
+                HStack(spacing: 12) {
                     Spacer()
                     NavigationLink(destination: NewSessionView(), label: {
-                        Text("Record new session")
-                            .font(.title3)
-                            .padding(20)
+                        Text("Record (ARKit)")
+                            .font(.headline)
+                            .padding(.vertical, 18)
+                            .padding(.horizontal, 16)
                             .background(Color("TextColor"))
                             .foregroundColor(Color("LightColor"))
-                            .cornerRadius(35)
-                            .padding(20)
+                            .cornerRadius(30)
+                    })
+                    NavigationLink(destination: MultiLensRecordView(), label: {
+                        Text("Multi-lens")
+                            .font(.headline)
+                            .padding(.vertical, 18)
+                            .padding(.horizontal, 16)
+                            .background(Color("TextColor"))
+                            .foregroundColor(Color("LightColor"))
+                            .cornerRadius(30)
                     })
                     Spacer()
+                }
+                .padding(.vertical, 20)
+                .sheet(isPresented: $showingSmoke) {
+                    NavigationView { MultiLensRecordView(autoRecordSeconds: 8) }
                 }
                 if (viewModel.sessions.isEmpty) {
                     Spacer()
@@ -139,6 +156,10 @@ struct SessionList: View {
                 if ProcessInfo.processInfo.arguments.contains("-probe") && !CameraProbe.autoRan {
                     CameraProbe.autoRan = true
                     showingProbe = true
+                }
+                if ProcessInfo.processInfo.arguments.contains("-multilens-smoke") && !SessionList.smokeRan {
+                    SessionList.smokeRan = true
+                    showingSmoke = true
                 }
         }
         }

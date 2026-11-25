@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		24B9204E08E8610D3CB4F2CB /* Pods_StrayScanner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DBC054EDDA47FB8A717AA671 /* Pods_StrayScanner.framework */; };
 		38045D582561A7370004F23C /* SessionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38045D572561A7370004F23C /* SessionRow.swift */; };
+		02D9E7410238F5680A9B73CB /* MultiLensRecordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C047346660A809C5395F6D00 /* MultiLensRecordView.swift */; };
 		38045D5A2561AC000004F23C /* SessionList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38045D592561AC000004F23C /* SessionList.swift */; };
 		3807420B27BBCE83003194C1 /* PngEncoder.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3807420A27BBCE83003194C1 /* PngEncoder.mm */; };
 		3807420F27BBCF2D003194C1 /* lodepng.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3807420E27BBCF2D003194C1 /* lodepng.cpp */; settings = {COMPILER_FLAGS = "-w"; }; };
@@ -25,6 +26,7 @@
 		3863FE5F25FCBB0E00C1DA4F /* NewSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38E969CA2572608E00054CC4 /* NewSession.swift */; };
 		3863FE6225FCBB0E00C1DA4F /* RecordSessionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38FB730E2572A9FA007D9CB0 /* RecordSessionViewController.swift */; };
 		3863FE6325FCBB0E00C1DA4F /* SessionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38045D572561A7370004F23C /* SessionRow.swift */; };
+		E38260F5F72FF0325F3C2186 /* MultiLensRecordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C047346660A809C5395F6D00 /* MultiLensRecordView.swift */; };
 		3863FE6425FCBB0E00C1DA4F /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 38FB73152572AF63007D9CB0 /* Shaders.metal */; };
 		3863FE6525FCBB0E00C1DA4F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 385999BC25616F2B00F3F681 /* AppDelegate.swift */; };
 		3863FE6625FCBB0E00C1DA4F /* SessionDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38C17B22259D1C80006B3FDA /* SessionDetail.swift */; };
@@ -47,7 +49,9 @@
 		38694C7826D2C66F00546EA1 /* VideoEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38694C6E26D2C66F00546EA1 /* VideoEncoder.swift */; };
 		38694C7926D2C66F00546EA1 /* VideoEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38694C6E26D2C66F00546EA1 /* VideoEncoder.swift */; };
 		38694C7A26D2C66F00546EA1 /* IMUEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38694C6F26D2C66F00546EA1 /* IMUEncoder.swift */; };
+		626631709ED6786C3EB93DF2 /* MultiCamRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C7767767D88D7E4FE7E731 /* MultiCamRecorder.swift */; };
 		38694C7B26D2C66F00546EA1 /* IMUEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38694C6F26D2C66F00546EA1 /* IMUEncoder.swift */; };
+		D9E1FD6602D09EB0F0429798 /* MultiCamRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C7767767D88D7E4FE7E731 /* MultiCamRecorder.swift */; };
 		9F4EE63E4E3CAD3334E39B57 /* CameraProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03463C49A4821483846AE861 /* CameraProbe.swift */; };
 		1DF4CB74D3FD740FDF44D5FF /* CameraProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03463C49A4821483846AE861 /* CameraProbe.swift */; };
 		38694C7C26D2C66F00546EA1 /* CameraRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38694C7026D2C66F00546EA1 /* CameraRenderer.swift */; };
@@ -87,6 +91,7 @@
 /* Begin PBXFileReference section */
 		09A6D95A8151C51C3ECF4131 /* Pods-StrayScanner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-StrayScanner.release.xcconfig"; path = "Target Support Files/Pods-StrayScanner/Pods-StrayScanner.release.xcconfig"; sourceTree = "<group>"; };
 		38045D572561A7370004F23C /* SessionRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRow.swift; sourceTree = "<group>"; };
+		C047346660A809C5395F6D00 /* MultiLensRecordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiLensRecordView.swift; sourceTree = "<group>"; };
 		38045D592561AC000004F23C /* SessionList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionList.swift; sourceTree = "<group>"; };
 		3807420A27BBCE83003194C1 /* PngEncoder.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = PngEncoder.mm; sourceTree = "<group>"; };
 		3807420C27BBCEB4003194C1 /* PngEncoder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PngEncoder.h; sourceTree = "<group>"; };
@@ -106,6 +111,7 @@
 		38694C6D26D2C66F00546EA1 /* ConfidenceEncoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConfidenceEncoder.swift; sourceTree = "<group>"; };
 		38694C6E26D2C66F00546EA1 /* VideoEncoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideoEncoder.swift; sourceTree = "<group>"; };
 		38694C6F26D2C66F00546EA1 /* IMUEncoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IMUEncoder.swift; sourceTree = "<group>"; };
+		E2C7767767D88D7E4FE7E731 /* MultiCamRecorder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiCamRecorder.swift; sourceTree = "<group>"; };
 		03463C49A4821483846AE861 /* CameraProbe.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CameraProbe.swift; sourceTree = "<group>"; };
 		38694C7026D2C66F00546EA1 /* CameraRenderer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CameraRenderer.swift; sourceTree = "<group>"; };
 		38694C7126D2C66F00546EA1 /* OdometryEncoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OdometryEncoder.swift; sourceTree = "<group>"; };
@@ -189,6 +195,7 @@
 			isa = PBXGroup;
 			children = (
 				38045D572561A7370004F23C /* SessionRow.swift */,
+				C047346660A809C5395F6D00 /* MultiLensRecordView.swift */,
 				38045D592561AC000004F23C /* SessionList.swift */,
 				38E969CA2572608E00054CC4 /* NewSession.swift */,
 				386E277725991163007D023B /* RecordButton.swift */,
@@ -258,6 +265,7 @@
 				38694C6D26D2C66F00546EA1 /* ConfidenceEncoder.swift */,
 				38694C6E26D2C66F00546EA1 /* VideoEncoder.swift */,
 				38694C6F26D2C66F00546EA1 /* IMUEncoder.swift */,
+				E2C7767767D88D7E4FE7E731 /* MultiCamRecorder.swift */,
 				03463C49A4821483846AE861 /* CameraProbe.swift */,
 				38694C7026D2C66F00546EA1 /* CameraRenderer.swift */,
 				38694C7126D2C66F00546EA1 /* OdometryEncoder.swift */,
@@ -512,10 +520,12 @@
 				38694C7E26D2C66F00546EA1 /* OdometryEncoder.swift in Sources */,
 				38694C7826D2C66F00546EA1 /* VideoEncoder.swift in Sources */,
 				38045D582561A7370004F23C /* SessionRow.swift in Sources */,
+				02D9E7410238F5680A9B73CB /* MultiLensRecordView.swift in Sources */,
 				38694C7426D2C66F00546EA1 /* DatasetEncoder.swift in Sources */,
 				3807420B27BBCE83003194C1 /* PngEncoder.mm in Sources */,
 				38694C7C26D2C66F00546EA1 /* CameraRenderer.swift in Sources */,
 				38694C7A26D2C66F00546EA1 /* IMUEncoder.swift in Sources */,
+				626631709ED6786C3EB93DF2 /* MultiCamRecorder.swift in Sources */,
 				9F4EE63E4E3CAD3334E39B57 /* CameraProbe.swift in Sources */,
 				38FB73162572AF63007D9CB0 /* Shaders.metal in Sources */,
 				385999BD25616F2B00F3F681 /* AppDelegate.swift in Sources */,
@@ -545,9 +555,11 @@
 				38694C7F26D2C66F00546EA1 /* OdometryEncoder.swift in Sources */,
 				38694C7926D2C66F00546EA1 /* VideoEncoder.swift in Sources */,
 				3863FE6325FCBB0E00C1DA4F /* SessionRow.swift in Sources */,
+				E38260F5F72FF0325F3C2186 /* MultiLensRecordView.swift in Sources */,
 				38694C7526D2C66F00546EA1 /* DatasetEncoder.swift in Sources */,
 				38694C7D26D2C66F00546EA1 /* CameraRenderer.swift in Sources */,
 				38694C7B26D2C66F00546EA1 /* IMUEncoder.swift in Sources */,
+				D9E1FD6602D09EB0F0429798 /* MultiCamRecorder.swift in Sources */,
 				1DF4CB74D3FD740FDF44D5FF /* CameraProbe.swift in Sources */,
 				3863FE6425FCBB0E00C1DA4F /* Shaders.metal in Sources */,
 				3863FE6525FCBB0E00C1DA4F /* AppDelegate.swift in Sources */,

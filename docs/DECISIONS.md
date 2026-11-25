@@ -237,5 +237,20 @@ Every project decision, with its reason and what was rejected. Entries are never
 - **Rejected:** dropping the ARKit mode. It works today and gives the reference trajectory.
 - **Evidence:** research/capture/01 §2 and §9, research/capture/02. **Decided by:** the owner's direction, with this
   shape proposed by Claude; the owner approved it on 2026-11-25 ("go head"). **Status:** Accepted.
-- **Progress:** step 1, the camera probe (`capture/ios/StrayScanner/Helpers/CameraProbe.swift`), built and run on the
-  iPhone 15 Pro on 2026-11-25.
+- **Progress:**
+  - Step 1, the camera probe (`capture/ios/StrayScanner/Helpers/CameraProbe.swift`), was built and run on the
+    iPhone 15 Pro on 2026-11-25 (research/capture/03).
+  - Step 2, the multi-lens mode, was built the same day. The owner said "build which ever is the best. dont works
+    about the heat".
+- **As built:**
+  - **Default preset: `dualWide`, wide + ultra-wide at 4K each, hardware-synchronised (0.11 ms).** That is the best
+    data for reconstruction: the two useful lenses at full resolution, exactly simultaneous. All three lenses in sync
+    only run at 1080p (a quarter of the pixels per lens) to add the telephoto, which helps least on roads. That is
+    kept as the second preset, "3 lenses · 1080p" (`triple`).
+  - **LiDAR is not in multi-lens mode.** Its camera is the wide lens, so it cannot join a combined camera, and the
+    LiDAR + lenses sets are not synchronised. The ARKit mode keeps LiDAR.
+  - **Distortion correction is kept on, which changes the plan above:** frames are close to pinhole and match the
+    per-frame intrinsics. Turning it off would need a separate distortion calibration.
+  - **Exposure** is automatic, with the shutter capped at 1/1000 s. Focus is automatic, because the combined cameras
+    cannot fix a lens position (probe). **Lock** freezes focus, exposure and white balance.
+  - `imu.csv` is in g (measured), not m/s² as the upstream docs said.

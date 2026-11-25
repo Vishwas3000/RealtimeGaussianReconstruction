@@ -41,7 +41,9 @@ struct SessionRow: View {
         .task {
             guard thumbnail == nil, let directory = session.directoryPath() else { return }
             details = RecordingSummary.rowDetails(directory: directory, duration: session.duration)
-            let generator = AVAssetImageGenerator(asset: AVURLAsset(url: directory.appendingPathComponent("rgb.mp4")))
+            // rgb.mp4 for ARKit recordings, the wide lens for multi-lens ones.
+            let video = session.absoluteRgbPath() ?? directory.appendingPathComponent("rgb.mp4")
+            let generator = AVAssetImageGenerator(asset: AVURLAsset(url: video))
             generator.maximumSize = CGSize(width: 320, height: 320)
             if let result = try? await generator.image(at: .zero) {
                 thumbnail = UIImage(cgImage: result.image)

@@ -26,7 +26,19 @@ Why it is built this way: [research/capture/](../research/capture/README.md).
 - **Keep the hood and dashboard out of frame** as far as possible. A dark cloth on the dash cuts reflections.
 - **Heat:** shade the phone, run the AC, and don't charge while recording. Apple rates iPhones for 0–35 °C.
 
-## Record
+## Two ways to record
+
+- **Record (ARKit):** the main lens with live camera positions from ARKit, plus LiDAR depth if you switch it on.
+  The controls below.
+- **Multi-lens:** several lenses at once, hardware-synchronised, with no ARKit. Camera positions are computed
+  afterwards from the videos and the motion sensors.
+  - Presets: **2 lenses · 4K** (wide + ultra-wide, the default and the best for reconstruction) and **3 lenses ·
+    1080p** (adds the telephoto).
+  - **Lock** freezes focus, exposure and white balance.
+  - The status line shows each lens's frame rate, dropped frames, GPS and heat.
+  - Files: [ios/docs/format.md](ios/docs/format.md#multi-lens-recordings-roadcapture-d-014).
+
+## Record (ARKit mode)
 
 | Control | What it does |
 |---|---|
@@ -81,6 +93,10 @@ python3 -m unittest discover -s capture/tools                         # the chec
 - It reports the frame rate and dropped frames, how the phone was mounted (upright, upside down or sideways, and its
   tilt), ARKit tracking health, heat, the start-to-end error, and ARKit's scale against GPS.
 - It exits with 1 when something needs attention.
+
+**Multi-lens recordings** go through the same checker. It reports each lens's frame rate and missing frames,
+whether every frame has its lens parameters, how many milliseconds apart the lenses' frames are (under 1 ms means
+hardware-synchronised), the motion-sensor rate, and GPS distance and speed.
 
 ## Privacy
 
