@@ -48,6 +48,8 @@
 		38694C7926D2C66F00546EA1 /* VideoEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38694C6E26D2C66F00546EA1 /* VideoEncoder.swift */; };
 		38694C7A26D2C66F00546EA1 /* IMUEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38694C6F26D2C66F00546EA1 /* IMUEncoder.swift */; };
 		38694C7B26D2C66F00546EA1 /* IMUEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38694C6F26D2C66F00546EA1 /* IMUEncoder.swift */; };
+		9F4EE63E4E3CAD3334E39B57 /* CameraProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03463C49A4821483846AE861 /* CameraProbe.swift */; };
+		1DF4CB74D3FD740FDF44D5FF /* CameraProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03463C49A4821483846AE861 /* CameraProbe.swift */; };
 		38694C7C26D2C66F00546EA1 /* CameraRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38694C7026D2C66F00546EA1 /* CameraRenderer.swift */; };
 		38694C7D26D2C66F00546EA1 /* CameraRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38694C7026D2C66F00546EA1 /* CameraRenderer.swift */; };
 		38694C7E26D2C66F00546EA1 /* OdometryEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38694C7126D2C66F00546EA1 /* OdometryEncoder.swift */; };
@@ -104,6 +106,7 @@
 		38694C6D26D2C66F00546EA1 /* ConfidenceEncoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConfidenceEncoder.swift; sourceTree = "<group>"; };
 		38694C6E26D2C66F00546EA1 /* VideoEncoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideoEncoder.swift; sourceTree = "<group>"; };
 		38694C6F26D2C66F00546EA1 /* IMUEncoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IMUEncoder.swift; sourceTree = "<group>"; };
+		03463C49A4821483846AE861 /* CameraProbe.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CameraProbe.swift; sourceTree = "<group>"; };
 		38694C7026D2C66F00546EA1 /* CameraRenderer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CameraRenderer.swift; sourceTree = "<group>"; };
 		38694C7126D2C66F00546EA1 /* OdometryEncoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OdometryEncoder.swift; sourceTree = "<group>"; };
 		38694C7226D2C66F00546EA1 /* DepthEncoder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DepthEncoder.swift; sourceTree = "<group>"; };
@@ -255,6 +258,7 @@
 				38694C6D26D2C66F00546EA1 /* ConfidenceEncoder.swift */,
 				38694C6E26D2C66F00546EA1 /* VideoEncoder.swift */,
 				38694C6F26D2C66F00546EA1 /* IMUEncoder.swift */,
+				03463C49A4821483846AE861 /* CameraProbe.swift */,
 				38694C7026D2C66F00546EA1 /* CameraRenderer.swift */,
 				38694C7126D2C66F00546EA1 /* OdometryEncoder.swift */,
 				38694C7226D2C66F00546EA1 /* DepthEncoder.swift */,
@@ -512,6 +516,7 @@
 				3807420B27BBCE83003194C1 /* PngEncoder.mm in Sources */,
 				38694C7C26D2C66F00546EA1 /* CameraRenderer.swift in Sources */,
 				38694C7A26D2C66F00546EA1 /* IMUEncoder.swift in Sources */,
+				9F4EE63E4E3CAD3334E39B57 /* CameraProbe.swift in Sources */,
 				38FB73162572AF63007D9CB0 /* Shaders.metal in Sources */,
 				385999BD25616F2B00F3F681 /* AppDelegate.swift in Sources */,
 				38C17B23259D1C80006B3FDA /* SessionDetail.swift in Sources */,
@@ -543,6 +548,7 @@
 				38694C7526D2C66F00546EA1 /* DatasetEncoder.swift in Sources */,
 				38694C7D26D2C66F00546EA1 /* CameraRenderer.swift in Sources */,
 				38694C7B26D2C66F00546EA1 /* IMUEncoder.swift in Sources */,
+				1DF4CB74D3FD740FDF44D5FF /* CameraProbe.swift in Sources */,
 				3863FE6425FCBB0E00C1DA4F /* Shaders.metal in Sources */,
 				3863FE6525FCBB0E00C1DA4F /* AppDelegate.swift in Sources */,
 				3863FE6625FCBB0E00C1DA4F /* SessionDetail.swift in Sources */,

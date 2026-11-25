@@ -47,6 +47,7 @@ class SessionListViewModel: ObservableObject {
 struct SessionList: View {
     @ObservedObject var viewModel = SessionListViewModel()
     @State private var showingInfo = false
+    @State private var showingProbe = false  // RoadCapture: camera probe (D-012)
 
     var body: some View {
         ZStack {
@@ -62,6 +63,18 @@ struct SessionList: View {
                         .multilineTextAlignment(.center)
                         .padding([.top, .leading], 15.0)
                     Spacer()
+                    Button(action: {
+                        showingProbe = true
+                    }, label: {
+                        Image(systemName: "camera.aperture")
+                            .resizable()
+                            .frame(width: 25, height: 25, alignment: .center)
+                            .padding(.top, 17)
+                            .padding(.trailing, 12)
+                            .foregroundColor(Color("TextColor"))
+                    }).sheet(isPresented: $showingProbe) {
+                        ProbeView()
+                    }
                     Button(action: {
                         showingInfo.toggle()
                     }, label: {
@@ -122,6 +135,11 @@ struct SessionList: View {
                 })
                 let delegate = UIApplication.shared.delegate as! AppDelegate
                 delegate.appDaemon?.removeDeletedEntries()
+                // Launched with "-probe" (e.g. from the Mac with devicectl): run the camera probe once.
+                if ProcessInfo.processInfo.arguments.contains("-probe") && !CameraProbe.autoRan {
+                    CameraProbe.autoRan = true
+                    showingProbe = true
+                }
         }
         }
         .background(Color("BackgroundColor").edgesIgnoringSafeArea(.all))

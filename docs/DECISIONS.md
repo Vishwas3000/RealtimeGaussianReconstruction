@@ -17,7 +17,7 @@ Every project decision, with its reason and what was rejected. Entries are never
 | D-009 | 2026-11-25 | Focus on one front camera (monocular reconstruction) for now | **Accepted** |
 | D-010 | 2026-11-25 | Monocular path M1 → M4, removing one crutch per step | Proposed |
 | D-011 | 2026-11-25 | Own capture: custom iPhone app with ARKit inside (main lens + poses), LiDAR off | **Accepted** |
-| D-012 | 2026-11-25 | Add a multi-lens capture mode (no ARKit); poses in post-processing from IMU + GPS; keep ARKit mode as the reference | Proposed |
+| D-012 | 2026-11-25 | Add a multi-lens capture mode (no ARKit); poses in post-processing from IMU + GPS; keep ARKit mode as the reference | **Accepted** |
 
 ## D-001: rebuild Tesla's 2021–22 explicit pipeline first
 - **Decision:** cameras → top-down vector space + occupancy + lanes → render, the stack Tesla described at AI Day 2021/22 and CVPR 2022.
@@ -177,4 +177,6 @@ Every project decision, with its reason and what was rejected. Entries are never
   - Heat limits recordings to 10–15 minutes above a system-pressure cost of 1.
 - **Rejected:** dropping the ARKit mode. It works today and gives the reference trajectory.
 - **Evidence:** research/capture/01 §2 and §9, research/capture/02. **Decided by:** the owner's direction, with this
-  shape proposed by Claude. **Status:** Proposed.
+  shape proposed by Claude; the owner approved it on 2026-11-25 ("go head"). **Status:** Accepted.
+- **Progress:** step 1, the camera probe (`capture/ios/StrayScanner/Helpers/CameraProbe.swift`), built and run on the
+  iPhone 15 Pro on 2026-11-25.
