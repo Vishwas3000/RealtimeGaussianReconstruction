@@ -5,16 +5,18 @@
 #   wsl -d Ubuntu-22.04 -u root -- bash <repo>/recon/setup_wsl.sh system    # CUDA 12.8 toolkit + build tools (root)
 #   wsl -d Ubuntu-22.04 -- bash <repo>/recon/setup_wsl.sh python            # venv, torch, drivestudio, CUDA builds
 # where <repo> is the WSL path of this repository, e.g. /mnt/c/Users/<you>/OneDrive/Documents/GitHub/RealtimeGaussianReconstruction
+# On a rented Linux GPU box use recon/setup_linux.sh instead; it runs this script's python step with the variables below set.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DRIVESTUDIO_DIR="$HOME/drivestudio"
+DRIVESTUDIO_DIR="${DRIVESTUDIO_DIR:-$HOME/drivestudio}"
 DRIVESTUDIO_COMMIT=e59bda4fa681f829dbb1d65f0de582b0f633c450
-VENV="$HOME/venvs/drivestudio"
+VENV="${VENV:-$HOME/venvs/drivestudio}"
+PYTHON="${PYTHON:-python3.10}"
 
-export CUDA_HOME=/usr/local/cuda-12.8
+export CUDA_HOME="${CUDA_HOME:-/usr/local/cuda-12.8}"
 export PATH="$CUDA_HOME/bin:$PATH"
-export TORCH_CUDA_ARCH_LIST="12.0"
+export TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-12.0}"
 export MAX_JOBS="${MAX_JOBS:-6}"
 
 system() {
@@ -36,7 +38,7 @@ python_env() {
   git -C "$DRIVESTUDIO_DIR" checkout -q "$DRIVESTUDIO_COMMIT"
   git -C "$DRIVESTUDIO_DIR" submodule update --init --recursive -q
 
-  [ -d "$VENV" ] || python3.10 -m venv "$VENV"
+  [ -d "$VENV" ] || "$PYTHON" -m venv "$VENV"
   # shellcheck disable=SC1091
   source "$VENV/bin/activate"
   # setuptools < 70 still ships pkg_resources, which torchmetrics 0.10.3 (drivestudio's pin) imports.

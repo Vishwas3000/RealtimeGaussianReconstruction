@@ -20,6 +20,7 @@ Every project decision, with its reason and what was rejected. Entries are never
 | D-012 | 2026-11-25 | Monocular path M1 → M4, removing one crutch per step | Proposed |
 | D-013 | 2026-11-25 | Own capture: custom iPhone app with ARKit inside (main lens + poses), LiDAR off | **Accepted** |
 | D-014 | 2026-11-25 | Add a multi-lens capture mode (no ARKit); poses in post-processing from IMU + GPS; keep ARKit mode as the reference | **Accepted** |
+| D-015 | 2026-11-26 | Reconstruction also runs on a temporary rented Linux box (RTX 5090, shared): D-010's stack, isolated in one folder | Implemented |
 
 ## D-001: rebuild Tesla's 2021–22 explicit pipeline first
 - **Decision:** cameras → top-down vector space + occupancy + lanes → render, the stack Tesla described at AI Day 2021/22 and CVPR 2022.
@@ -177,7 +178,9 @@ Every project decision, with its reason and what was rejected. Entries are never
   - Starting feed-forward: our notes have no monocular driving model with both a measured latency and public weights.
 - **Data:**
   - nuScenes-mini needs the owner's free nuScenes account. drivestudio's config already points at `processed_10Hz/mini`.
-  - Fallback without an account: one Argoverse 2 log (1.14 GB, research/12). drivestudio's instructions download the whole
+  - Fallback without an account: one Argoverse 2 log (1.14 GB, research/12).
+  - **Correction (2026-11-26):** no account is needed for the mini split. `https://www.nuscenes.org/data/v1.0-mini.tgz`, the
+    link the devkit's own tutorial uses, downloaded without a login. The licence is still CC BY-NC-SA 4.0 (non-commercial). drivestudio's instructions download the whole
     sensor set, so one log needs its scene list adjusted, and it needs drivestudio's Rust-based av2 API.
 - **Correction (2026-11-25, later the same day):** `load_lidar: False` is not a usable switch.
   - drivestudio `datasets/driving_dataset.py` line 79 asserts that a LiDAR source exists, and `load_lidar: False`
@@ -186,6 +189,19 @@ Every project decision, with its reason and what was rejected. Entries are never
   - So M2 and M3 write metric depth, back-projected with the camera pose, into the LiDAR slot ("pseudo-LiDAR")
     instead of switching LiDAR off. Evidence: research/capture/README.md.
 - **Decided by:** Claude. **Status:** Proposed.
+- **Progress (2026-11-26): M1 front-camera run.** Settings: scene 000 (scene-0061); OmniRe without SMPL; CAM_FRONT at
+  800×450; 30,000 steps; every 10th frame held out; on the rented RTX 5090 (D-015).
+  - Training took 28 min 11 s (0.056 s/step), with peak memory 7.19 GB allocated.
+  - PSNR:
+    - training frames 33.7 dB at the last step;
+    - all 191 frames 32.7 dB;
+    - **19 held-out frames 23.3 dB** (SSIM 0.66, LPIPS 0.15);
+    - moving objects on held-out frames 21.2 dB.
+  - Held-out renders show the same objects in the same places. The 10 dB gap shows up as slight blur, colour
+    differences and 1–2-pixel shifts.
+  - Not yet separated: how much of the gap is real one-camera loss, and how much comes from per-frame corrections
+    learned only for training frames (camera-pose refinement and colour correction).
+  - The 3-camera comparison has not been run yet.
 
 ## D-013: own capture is a custom iPhone app with ARKit inside
 - **Decision:** for M3, record with a fork of Stray Scanner (MIT), which records ARKit video, LiDAR depth, poses,
@@ -260,3 +276,38 @@ Every project decision, with its reason and what was rejected. Entries are never
   - **On-phone test (2026-11-26, iPhone 15 Pro):** 4K30 on both lenses at ~50 Mbit/s each, 0 dropped frames,
     intrinsics on every frame, motion sensors at 100 Hz, heat nominal over 8 s.
   - `imu.csv` is in g (measured), not m/s² as the upstream docs said.
+
+## D-015: reconstruction also runs on a temporary rented Linux box, with D-010's stack isolated in one folder
+- **Decision:** set up D-010's stack unchanged on a temporary rented Linux machine the owner provided: a Vast.ai
+  instance with an RTX 5090 (32 GB, sm_120), shared with other people's running jobs. `recon/setup_linux.sh` does it:
+  - the same pins as D-010: torch 2.7.1 + cu128, gsplat 1.3.0, pytorch3d 0.7.8, nvdiffrast, drivestudio e59bda4f;
+  - a private CUDA 12.8 toolkit from conda-forge and Python 3.10 from uv, both inside the project folder;
+  - `env.sh` in that folder sets the paths and keeps every cache inside it.
+- **Why:**
+  - The owner (2026-11-26): "once we have the assets we need we need to setup the system to recreate the scene… you
+    can setup this project."
+  - The box's own CUDA is 13.4. torch refuses to build extensions with a different CUDA major version than its own
+    (12.8).
+  - The box's Python is 3.12, and drivestudio's numpy 1.23.1 pin has no wheels for it.
+  - Other people's services run on the box: 17.9 of its 32.6 GB of GPU memory were in use at setup. So nothing is
+    installed system-wide, and nothing outside the folder is changed.
+  - The same versions as the RTX 5070 Ti machine keep results comparable.
+- **Rejected:**
+  - torch cu130 built against the box's CUDA 13.4: untested with gsplat 1.3.0 and pytorch3d, and not D-010's stack.
+  - apt's `cuda-toolkit-12-8`: a system-wide change on a shared machine.
+  - This reverses D-010's "a rented 4090 for now" rejection, by the owner's choice.
+- **Limits:**
+  - `/workspace` on that instance is not a volume, so everything is lost when the instance is destroyed. Copy
+    results off first.
+  - Connection details are not recorded: the box is temporary (the owner's instruction).
+- **Measured (2026-11-26):**
+  - Setup took 5 min 44 s. The GPU self-test passed 4/4.
+  - The nuScenes-mini download (4.2 GB) took 48 s; preprocessing all 10 scenes took 67 s; sky masks for scene 000
+    (1,146 images) took 29 s.
+  - **M1 smoke test** (scene 000, front camera only at 800×450, 2,000 steps):
+    - 71 s of training (0.036 s/step);
+    - peak 4.33 GB allocated, 4.90 GB reserved;
+    - train PSNR 26.6 dB;
+    - the render already matches the real frame.
+  - The other jobs' GPU memory stayed at 17.9 GB throughout.
+- **Decided by:** the owner (use the box); setup by Claude. **Status:** Implemented.

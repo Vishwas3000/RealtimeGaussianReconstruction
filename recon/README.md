@@ -26,6 +26,27 @@ The last step ends with `recon/smoke_test_gpu.py`; all four checks (torch, gspla
 When a WSL command uses shell variables, run it as `wsl -d Ubuntu-22.04 -e bash -c '...'`. `wsl -- ...` goes through
 a login shell that expands the variables before your command sees them.
 
+## Setup on a rented Linux GPU box (e.g. Vast.ai)
+
+```
+git clone https://github.com/Vishwas3000/RealtimeGaussianReconstruction.git /workspace/teslarender/repo
+ROOT=/workspace/teslarender bash /workspace/teslarender/repo/recon/setup_linux.sh
+source /workspace/teslarender/env.sh      # in every new shell; ~/drivestudio below is then $DRIVESTUDIO_DIR
+```
+
+- Same pinned stack as WSL. Everything goes in `$ROOT`: Python 3.10 from uv, a CUDA 12.8 toolkit from conda-forge,
+  the venv, drivestudio and all caches. Nothing is installed system-wide, because other people's jobs may share the box.
+- A box's own CUDA 13.x can't compile extensions for torch cu128 (major versions must match); `env.sh` puts the
+  12.8 toolkit first. `TORCH_CUDA_ARCH_LIST` is read from `nvidia-smi`.
+- On Vast, `/workspace` is deleted with the instance unless it is a mounted volume. Copy results off first.
+- Data there: nuScenes-mini downloads without a login (licence CC BY-NC-SA 4.0):
+  ```
+  mkdir -p $ROOT/data/nuscenes/raw $DRIVESTUDIO_DIR/data && ln -sfn $ROOT/data/nuscenes $DRIVESTUDIO_DIR/data/nuscenes
+  cd $ROOT/data/nuscenes && curl -fsSL -o v1.0-mini.tgz https://www.nuscenes.org/data/v1.0-mini.tgz \
+    && tar -xzf v1.0-mini.tgz -C raw && rm v1.0-mini.tgz && cd $DRIVESTUDIO_DIR
+  ```
+  Then run the `preprocess.py` and `extract_sky_masks.py` lines from "Data" below, with `<repo>` = `$ROOT/repo`.
+
 ## Data (inside WSL)
 
 ```
@@ -86,3 +107,15 @@ Full 30,000-step run, same scene and settings:
 camera in memory. On a 31 GB host, with WSL allowed up to ~15.5 GB, that coincided with Windows running critically low
 on memory and the run being stopped before the videos were written. The checkpoints were already saved. Re-render the
 videos from `checkpoint_final.pth` with other programs closed.
+
+## Measured on a rented RTX 5090 (32 GB, shared with other jobs)
+
+Scene-0061 (`000`), **front camera only** (`dataset=nuscenes/1cams`, 800×450), the same OmniRe config, D-012's step M1:
+
+| | 2,000-step smoke run | 30,000-step run, every 10th frame held out |
+|---|---|---|
+| Training time | 71 s (0.036 s/step) | 28 min 11 s (0.056 s/step) |
+| Peak PyTorch memory | 4.33 GB allocated | 7.19 GB allocated |
+| PSNR | train 26.6 dB | train 33.7 dB; all 191 frames 32.7 dB; **19 held-out frames 23.3 dB** |
+
+The 10 dB gap between training and held-out frames is the baseline later monocular steps have to close (D-012).

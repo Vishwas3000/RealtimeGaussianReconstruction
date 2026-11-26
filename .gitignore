@@ -13,3 +13,5 @@ renderer/public/data/
 
 # RoadCapture recordings and probe reports: GPS tracks, faces, number plates
 capture/data/
+# training outputs copied back from GPU boxes (nuScenes renders are non-commercial; checkpoints are large)
+work_dirs/
