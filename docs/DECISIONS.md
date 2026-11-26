@@ -251,6 +251,12 @@ Every project decision, with its reason and what was rejected. Entries are never
     LiDAR + lenses sets are not synchronised. The ARKit mode keeps LiDAR.
   - **Distortion correction is kept on, which changes the plan above:** frames are close to pinhole and match the
     per-frame intrinsics. Turning it off would need a separate distortion calibration.
-  - **Exposure** is automatic, with the shutter capped at 1/1000 s. Focus is automatic, because the combined cameras
-    cannot fix a lens position (probe). **Lock** freezes focus, exposure and white balance.
+  - **Exposure** is automatic with a shutter cap you choose: ≤1/1000 (default, daylight), ≤1/250 or Auto. A fixed
+    1/1000 s made indoor frames nearly black (ISO pinned at its ceiling, measured 2026-11-26). Focus is automatic,
+    because the combined cameras cannot fix a lens position (probe). **Lock** freezes focus, exposure and white
+    balance.
+  - **Lenses share one start and stop time.** Creating each writer takes ~200 ms, which had made the second lens 6
+    frames late. Measured after the fix: 248/248 frames, 0.11 ms apart.
+  - **On-phone test (2026-11-26, iPhone 15 Pro):** 4K30 on both lenses at ~50 Mbit/s each, 0 dropped frames,
+    intrinsics on every frame, motion sensors at 100 Hz, heat nominal over 8 s.
   - `imu.csv` is in g (measured), not m/s² as the upstream docs said.

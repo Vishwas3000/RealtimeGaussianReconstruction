@@ -152,8 +152,15 @@ gps.csv              same format as above
 frames across lenses by `timestamp`, not by index.
 
 **Camera settings.**
-- Auto focus, exposure and white balance, with the shutter capped at 1/1000 s (ISO rises instead). **Lock** freezes all
-  three.
+- Auto focus, exposure and white balance. The longest shutter auto exposure may use is a setting:
+  - **≤1/1000** (default) for daylight driving;
+  - **≤1/250** for overcast or dusk;
+  - **Auto** for night and indoor tests.
+
+  At 1/1000 s indoors, ISO pins at its ceiling (2000 wide, 3200 ultra-wide, measured) and frames come out nearly
+  black. **Lock** freezes all three. `capture_info.json` records `shutter_cap`.
+- All lenses share one start time and one stop time, so synchronised lenses keep exactly the same frames (measured:
+  248/248, first and last frames 0.11 ms apart).
 - Video stabilisation is off.
 - Apple's geometric distortion correction is left **on**, so frames are close to pinhole and match the per-frame
   intrinsics. `capture_info.json` records `gdc_enabled`.

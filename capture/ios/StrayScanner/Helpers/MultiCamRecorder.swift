@@ -41,6 +41,30 @@ enum MultiLensPreset: Int, CaseIterable {
     }
 }
 
+/// Longest shutter auto exposure may use. Fast keeps road footage sharp but goes dark indoors or at night
+/// (measured: ISO pinned at 2000/3200 and near-black frames indoors at 1/1000 s).
+enum ShutterCap: Int, CaseIterable {
+    case fast = 0     // ≤ 1/1000 s: daylight driving (auto exposure picks ~1/5000 s in sun anyway)
+    case medium = 1   // ≤ 1/250 s: overcast, dusk
+    case auto = 2     // no cap: night, indoor tests (motion blur at speed)
+
+    var label: String {
+        switch self {
+        case .fast: return "≤1/1000"
+        case .medium: return "≤1/250"
+        case .auto: return "Auto"
+        }
+    }
+
+    var maxDuration: CMTime? {
+        switch self {
+        case .fast: return CMTime(value: 1, timescale: 1000)
+        case .medium: return CMTime(value: 1, timescale: 250)
+        case .auto: return nil
+        }
+    }
+}
+
 /// One lens of the combined camera. `writer` is only touched on `queue`.
 final class LensStream {
     let name: String
@@ -77,6 +101,9 @@ final class LensWriter {
     private var started = false
     private(set) var frames = 0
     private(set) var dropped = 0
+    /// Every lens records the same window, so synchronised lenses keep exactly the same frames.
+    var startAt = CMTime.zero
+    var stopAt = CMTime.positiveInfinity
 
     init(video: URL, csv csvURL: URL, width: Int, height: Int, fps: Int) throws {
         writer = try AVAssetWriter(outputURL: video, fileType: .mp4)
@@ -99,6 +126,9 @@ final class LensWriter {
     @discardableResult
     func append(_ buffer: CMSampleBuffer) -> Bool {
         let pts = CMSampleBufferGetPresentationTimeStamp(buffer)
+        if CMTimeCompare(pts, startAt) < 0 || CMTimeCompare(pts, stopAt) > 0 {
+            return true // outside the shared recording window: skipped on purpose, not dropped
+        }
         if !started {
             guard writer.startWriting() else { dropped += 1; return false }
             writer.startSession(atSourceTime: pts) // the movie starts at this lens's first frame
@@ -137,6 +167,8 @@ final class MultiCamRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     private(set) var streams: [LensStream] = []
     private(set) var device: AVCaptureDevice?
     private(set) var preset: MultiLensPreset = .wideUltraWide4K
+    private var shutterCap: ShutterCap = .fast
+    private var locked = false
     private let motion = CMMotionManager()
     private let imuQueue = OperationQueue()
     private let imuLock = NSLock()
@@ -258,8 +290,8 @@ final class MultiCamRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         return nil
     }
 
-    /// Auto focus, exposure and white balance, with the shutter capped at 1/1000 s against motion blur
-    /// (auto exposure raises ISO instead). Every frame's real exposure goes into the lens CSVs.
+    /// Auto focus, exposure and white balance, with the shutter capped (ShutterCap) against motion blur; auto exposure
+    /// raises ISO instead. Every frame's real exposure goes into the lens CSVs.
     private func applyAutoSettings(_ device: AVCaptureDevice) {
         do {
             try device.lockForConfiguration()
@@ -267,10 +299,12 @@ final class MultiCamRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferDele
             if device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) { device.whiteBalanceMode = .continuousAutoWhiteBalance }
             if device.isExposureModeSupported(.continuousAutoExposure) {
                 device.exposureMode = .continuousAutoExposure
-                let cap = CMTime(value: 1, timescale: 1000)
                 let format = device.activeFormat
-                if CMTimeCompare(cap, format.minExposureDuration) >= 0 && CMTimeCompare(cap, format.maxExposureDuration) <= 0 {
+                if let cap = shutterCap.maxDuration,
+                   CMTimeCompare(cap, format.minExposureDuration) >= 0 && CMTimeCompare(cap, format.maxExposureDuration) <= 0 {
                     device.activeMaxExposureDuration = cap
+                } else {
+                    device.activeMaxExposureDuration = .invalid // back to the format's default
                 }
             }
             device.unlockForConfiguration()
@@ -280,8 +314,16 @@ final class MultiCamRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     }
 
     /// Lock focus, exposure and white balance where they are now; unlocking returns to the auto settings.
+    func setShutterCap(_ cap: ShutterCap) {
+        sessionQueue.async {
+            self.shutterCap = cap
+            if let device = self.device, !self.locked { self.applyAutoSettings(device) }
+        }
+    }
+
     func setLocked(_ locked: Bool) {
         sessionQueue.async {
+            self.locked = locked
             guard let device = self.device else { return }
             if !locked {
                 self.applyAutoSettings(device)
@@ -310,17 +352,26 @@ final class MultiCamRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferDele
             let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             let name = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased().prefix(10))
             let directory = documents.appendingPathComponent(name, isDirectory: true)
+            var writers: [LensWriter] = []
             do {
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                // Create every writer first: creating one takes ~200 ms (measured), which made the second lens
+                // start 6 frames late when each was started as soon as it was created.
                 for stream in self.streams {
-                    let writer = try LensWriter(video: directory.appendingPathComponent("\(stream.name).mp4"),
-                                                csv: directory.appendingPathComponent("\(stream.name).csv"),
-                                                width: stream.width, height: stream.height, fps: 30)
-                    stream.queue.sync { stream.writer = writer }
+                    writers.append(try LensWriter(video: directory.appendingPathComponent("\(stream.name).mp4"),
+                                                  csv: directory.appendingPathComponent("\(stream.name).csv"),
+                                                  width: stream.width, height: stream.height, fps: 30))
                 }
             } catch {
                 DispatchQueue.main.async { done("Can't start recording: \(error.localizedDescription)") }
                 return
+            }
+            // One start time for all lenses, slightly ahead so every writer is in place before it.
+            let clock = self.session.synchronizationClock ?? CMClockGetHostTimeClock()
+            let startAt = CMTimeAdd(CMClockGetTime(clock), CMTime(value: 1, timescale: 10))
+            for (stream, writer) in zip(self.streams, writers) {
+                writer.startAt = startAt
+                stream.queue.sync { stream.writer = writer }
             }
             self.gpsQueue.sync { self.gps = LocationEncoder(url: directory.appendingPathComponent("gps.csv")) }
             self.imuLock.lock()
@@ -340,6 +391,7 @@ final class MultiCamRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferDele
             captureInfo["camera_fps"] = 30
             captureInfo["gdc_enabled"] = device.isGeometricDistortionCorrectionSupported && device.isGeometricDistortionCorrectionEnabled
             captureInfo["max_exposure_s"] = device.activeMaxExposureDuration.seconds
+            captureInfo["shutter_cap"] = self.shutterCap.label
             captureInfo["extrinsics"] = CameraProbe.extrinsics(device.constituentDevices)
             captureInfo["imu"] = "imu.csv: Core Motion accelerometer in g and gyroscope in rad/s, device axes"
             captureInfo["clock"] = "All CSV timestamps are seconds on the host/uptime clock (sample buffer PTS, Core Motion, ProcessInfo.systemUptime)."
@@ -354,6 +406,13 @@ final class MultiCamRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     func stopRecording(done: @escaping (URL?, TimeInterval) -> Void) {
         sessionQueue.async {
             self.stopIMU()
+            // One stop time for all lenses; wait briefly so frames captured before it reach every writer.
+            let clock = self.session.synchronizationClock ?? CMClockGetHostTimeClock()
+            let stopAt = CMClockGetTime(clock)
+            for stream in self.streams {
+                stream.queue.sync { stream.writer?.stopAt = stopAt }
+            }
+            Thread.sleep(forTimeInterval: 0.15)
             let group = DispatchGroup()
             for stream in self.streams {
                 group.enter()

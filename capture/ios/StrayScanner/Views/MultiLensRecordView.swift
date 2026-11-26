@@ -14,6 +14,7 @@ import CoreData
 final class MultiLensModel: NSObject, ObservableObject, CLLocationManagerDelegate {
     let recorder = MultiCamRecorder()
     @Published var preset: MultiLensPreset
+    @Published var shutter: ShutterCap
     @Published var recording = false
     @Published var busy = true
     @Published var locked = false
@@ -26,11 +27,19 @@ final class MultiLensModel: NSObject, ObservableObject, CLLocationManagerDelegat
     private var startedAt: Date?
     private let autoRecordSeconds: Double?
     private static let presetKey = "MultiLensPreset"
+    private static let shutterKey = "MultiLensShutter"
 
     init(autoRecordSeconds: Double? = nil) {
         self.autoRecordSeconds = autoRecordSeconds
         preset = MultiLensPreset(rawValue: UserDefaults.standard.integer(forKey: MultiLensModel.presetKey)) ?? .wideUltraWide4K
+        shutter = ShutterCap(rawValue: UserDefaults.standard.integer(forKey: MultiLensModel.shutterKey)) ?? .fast
         super.init()
+    }
+
+    func cycleShutter() {
+        shutter = ShutterCap(rawValue: (shutter.rawValue + 1) % ShutterCap.allCases.count) ?? .fast
+        UserDefaults.standard.set(shutter.rawValue, forKey: MultiLensModel.shutterKey)
+        recorder.setShutterCap(shutter)
     }
 
     func appear() {
@@ -43,6 +52,7 @@ final class MultiLensModel: NSObject, ObservableObject, CLLocationManagerDelegat
         location.requestWhenInUseAuthorization()
         location.startUpdatingLocation()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.tick() }
+        recorder.setShutterCap(shutter)
         apply(preset)
     }
 
@@ -64,8 +74,11 @@ final class MultiLensModel: NSObject, ObservableObject, CLLocationManagerDelegat
             self.busy = false
             self.error = error
             if error == nil, let seconds = self.autoRecordSeconds, !self.recording {
-                self.start()
-                DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { if self.recording { self.stop() } }
+                // Let auto exposure settle first: the first ~0.3 s after start ran at 1/60 s (measured).
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    self.start()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { if self.recording { self.stop() } }
+                }
             }
         }
     }
@@ -148,8 +161,13 @@ final class MultiLensModel: NSObject, ObservableObject, CLLocationManagerDelegat
             let s = Int(Date().timeIntervalSince(started))
             time = String(format: "REC %02d:%02d · ", s / 60, s % 60)
         }
+        var exposure = ""
+        if let device = recorder.device {
+            let seconds = device.exposureDuration.seconds
+            exposure = String(format: "ISO %.0f · 1/%.0f s · ", device.iso, seconds > 0 ? 1 / seconds : 0)
+        }
         status = "\(time)\(recorder.formatLabel) · fps: \(lenses.joined(separator: ", "))\n"
-            + "dropped \(drops) · GPS \(gps) · heat \(thermal)"
+            + "\(exposure)dropped \(drops) · GPS \(gps) · heat \(thermal)"
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
@@ -192,6 +210,9 @@ struct MultiLensRecordView: View {
                 }
                 .pickerStyle(.segmented)
                 .disabled(model.recording || model.busy)
+                Button(model.shutter.label) { model.cycleShutter() }
+                    .buttonStyle(.bordered)
+                    .disabled(model.busy || model.locked)
                 Button(model.locked ? "Locked" : "Lock") { model.toggleLock() }
                     .buttonStyle(.bordered)
                     .disabled(model.busy)

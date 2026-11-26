@@ -34,6 +34,8 @@ Why it is built this way: [research/capture/](../research/capture/README.md).
   afterwards from the videos and the motion sensors.
   - Presets: **2 lenses · 4K** (wide + ultra-wide, the default and the best for reconstruction) and **3 lenses ·
     1080p** (adds the telephoto).
+  - **Shutter** (≤1/1000 · ≤1/250 · Auto): use ≤1/1000 for daylight driving. Indoors or at night it makes frames
+    nearly black, so switch to ≤1/250 or Auto. The status line shows live ISO and shutter speed.
   - **Lock** freezes focus, exposure and white balance.
   - The status line shows each lens's frame rate, dropped frames, GPS and heat.
   - Files: [ios/docs/format.md](ios/docs/format.md#multi-lens-recordings-roadcapture-d-014).
