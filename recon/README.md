@@ -79,6 +79,19 @@ python <repo>/recon/train_with_vram.py --config_file <repo>/recon/configs/omnire
 - Results go to `~/work_dirs/<project>/<run_name>/`: `images/` holds the step visualisations (render vs. real
   cameras, and each layer separately), plus checkpoints, metrics and videos.
 
+## View in a browser
+
+```
+python <repo>/recon/export_splat.py ~/work_dirs/<project>/<run_name>/checkpoint_final.pth scene.splat
+```
+
+Drag `scene.splat` into [SuperSplat](https://superspl.at/editor) or [antimatter15's viewer](https://antimatter15.com/splat/).
+- The file holds the static street plus the cars where they were at frame 0, rotated to y-up.
+- Left out, because the 32-byte `.splat` format has no room for them: people, the sky, and colour that changes with
+  viewing angle.
+- Scene-0061 front camera: 1.21 M splats, 38.7 MB. Rendering the decoded file matches the full-precision splats at
+  64.7 dB PSNR.
+
 ## Measured on the RTX 5070 Ti (16 GB)
 
 Scene-0061 (`000`), 6 cameras at 1/3 resolution (≈533×300), 2,000-step smoke run:
