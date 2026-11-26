@@ -21,6 +21,7 @@ Every project decision, with its reason and what was rejected. Entries are never
 | D-013 | 2026-11-25 | Own capture: custom iPhone app with ARKit inside (main lens + poses), LiDAR off | **Accepted** |
 | D-014 | 2026-11-25 | Add a multi-lens capture mode (no ARKit); poses in post-processing from IMU + GPS; keep ARKit mode as the reference | **Accepted** |
 | D-015 | 2026-11-26 | Reconstruction also runs on a temporary rented Linux box (RTX 5090, shared): D-010's stack, isolated in one folder | Implemented |
+| D-016 | 2026-11-26 | First model tried against OmniRe: SplatAD. Held-out PSNR 30.2 vs 23.3 (different held-out frames) | Implemented |
 
 ## D-001: rebuild Tesla's 2021–22 explicit pipeline first
 - **Decision:** cameras → top-down vector space + occupancy + lanes → render, the stack Tesla described at AI Day 2021/22 and CVPR 2022.
@@ -311,3 +312,34 @@ Every project decision, with its reason and what was rejected. Entries are never
     - the render already matches the real frame.
   - The other jobs' GPU memory stayed at 17.9 GB throughout.
 - **Decided by:** the owner (use the box); setup by Claude. **Status:** Implemented.
+
+## D-016: SplatAD is the first model tried against OmniRe, one model at a time
+- **Decision:** run SplatAD (neurad-studio, Apache-2.0, commit 0d14d8e) on the same scene, camera, resolution, step count
+  and inputs as D-012's M1 OmniRe run:
+  - scene-0061, CAM_FRONT, 800×450, 30k steps, LiDAR + 3D boxes, 10% of frames held out;
+  - on the rented RTX 5090 (D-015).
+- **Why:**
+  - The owner (2026-11-26): "try other models", "that will likely perform better then this mniRe", "look inot all the
+    papers before making the decissions", then "do one at a time. just load one model and run for the scene
+    generation".
+  - Of the papers read verbatim (research/13), SplatAD is the only one with a like-for-like nuScenes comparison against
+    OmniRe: 27.54 vs 25.50 dB held-out PSNR, 6 cameras.
+  - Its code reads nuScenes directly, and its setup script targets CUDA 12.8, like our box.
+- **Rejected for now:**
+  - drivestudio's Street Gaussians, PVG and DeformableGS: within ±0.6 dB of OmniRe in BézierGS's and SplatAD's tables,
+    so no clear win expected.
+  - BézierGS: +2.1 dB on Waymo and +3.4 on nuPlan. But its data scripts are Waymo-only, it pins torch 2.0.1, and it
+    needs masks of moving objects.
+  - Difix3D+: a repair step for renders, not a reconstruction; non-commercial; NVIDIA now points to its successor,
+    Fixer.
+  - The wider four-part survey was stopped when the owner asked for one model at a time. What it didn't reach is listed
+    in research/13.
+- **Result** `[measured]`:
+  - **Held-out PSNR / SSIM / LPIPS: 30.18 / 0.899 / 0.128**, against OmniRe's 23.25 / 0.661 / 0.151.
+  - Training-frame PSNR is 33.7 for both, so the train-to-held-out gap is **3.5 vs 10.4 dB**.
+  - Costs: 74 min of training against 28 min, and 5.0 M splats (its cap) against 1.23 M.
+  - A 2 m lane shift shows visible tears (FID 148, against 37 unshifted).
+- **Caveat:** the held-out frames differ (SplatAD uses all 12 Hz images, drivestudio 10 Hz), so the 6.9 dB is not
+  like-for-like. A same-frames comparison is still to do.
+- **Decided by:** the owner (try models likely to beat OmniRe, one at a time); Claude (which one). **Status:**
+  Implemented.

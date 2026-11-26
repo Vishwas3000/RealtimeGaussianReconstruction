@@ -79,6 +79,32 @@ python <repo>/recon/train_with_vram.py --config_file <repo>/recon/configs/omnire
 - Results go to `~/work_dirs/<project>/<run_name>/`: `images/` holds the step visualisations (render vs. real
   cameras, and each layer separately), plus checkpoints, metrics and videos.
 
+## SplatAD (neurad-studio), for comparison (D-016)
+
+On the rented box after `setup_linux.sh`, in a fresh shell (not after `env.sh`):
+
+```
+export ROOT=/workspace/teslarender
+git clone https://github.com/georghess/neurad-studio.git $ROOT/other/neurad-studio     # run at commit 0d14d8e
+source $ROOT/repo/recon/splatad_env.sh
+cd $ROOT/other/neurad-studio && bash scripts/setup-env.sh && source $ROOT/repo/recon/splatad_env.sh
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+ns-train splatad --output-dir $ROOT/work_dirs/splatad --experiment-name scene0061_front --timestamp run --vis tensorboard \
+  --pipeline.datamanager.camera-res-scale-factor 0.5 \
+  nuscenes-data --data $ROOT/data/nuscenes/raw --version v1.0-mini --sequence 0061 --cameras FRONT --train-split-fraction 0.9
+R=$ROOT/work_dirs/splatad/scene0061_front/splatad/run
+ns-eval --load-config $R/config.yml --data-root-path $ROOT/data/nuscenes/raw --output-path $R/eval.json
+ns-render dataset --load-config $R/config.yml --data $ROOT/data/nuscenes/raw --pose-source test \
+  --rendered-output-names rgb gt-rgb --output-path $R/renders/held_out
+```
+
+- `ns-eval` needs `--data-root-path`. It overwrites the saved dataset path with it even when unset, a neurad-studio bug
+  (`nerfstudio/scripts/eval.py` line 70).
+- `ns-render dataset --shift 2 0 0` moves the camera 2 m to its right, i.e. a lane change. `ns-render interpolate
+  --shift` uses world axes instead.
+- Scene-0061, front camera: held-out PSNR 30.2 against OmniRe's 23.3, but on different held-out frames. Numbers and
+  caveats: [research/13](../research/13-models-beyond-omnire.md).
+
 ## View in a browser
 
 ```
