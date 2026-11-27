@@ -22,6 +22,7 @@ Every project decision, with its reason and what was rejected. Entries are never
 | D-014 | 2026-11-25 | Add a multi-lens capture mode (no ARKit); poses in post-processing from IMU + GPS; keep ARKit mode as the reference | **Accepted** |
 | D-015 | 2026-11-26 | Reconstruction also runs on a temporary rented Linux box (RTX 5090, shared): D-010's stack, isolated in one folder | Implemented |
 | D-016 | 2026-11-26 | First model tried against OmniRe: SplatAD. Held-out PSNR 30.2 vs 23.3 (different held-out frames) | Implemented |
+| D-017 | 2026-11-27 | The owner's iPhone video goes through drivestudio, with the phone's own LiDAR in place of a car LiDAR | In progress |
 
 ## D-001: rebuild Tesla's 2021–22 explicit pipeline first
 - **Decision:** cameras → top-down vector space + occupancy + lanes → render, the stack Tesla described at AI Day 2021/22 and CVPR 2022.
@@ -227,6 +228,8 @@ Every project decision, with its reason and what was rejected. Entries are never
   2026-11-25 ("yea you can start build this"). **Status:** Accepted.
 - **Implementation:** `capture/`, RoadCapture, a fork of Stray Scanner at ec3e1dc, plus `capture/tools/check_capture.py`
   for the loop test. Builds and signs on the Mac; not yet run on a phone.
+- **Update (2026-11-27):** LiDAR is switched on for the first reconstruction of the owner's own video, at the owner's
+  request (D-017).
 
 ## D-014: add a multi-lens capture mode; keep ARKit mode as the reference
 - **Decision:** add a second recording mode to RoadCapture, using AVFoundation's multi-camera session instead of ARKit:
@@ -343,3 +346,47 @@ Every project decision, with its reason and what was rejected. Entries are never
   like-for-like. A same-frames comparison is still to do.
 - **Decided by:** the owner (try models likely to beat OmniRe, one at a time); Claude (which one). **Status:**
   Implemented.
+
+## D-017: the owner's iPhone video goes through drivestudio, with the phone's own LiDAR in place of a car LiDAR
+- **Decision:**
+  - Record in RoadCapture's ARKit mode at 4K30 **with LiDAR on**. For this step that reverses D-013's "LiDAR off".
+  - `recon/arkit_to_drivestudio.py` writes the recording as a drivestudio scene, in the layout of its processed
+    nuScenes scenes, so drivestudio's loaders read it unchanged:
+    - frames at 1600×900;
+    - ARKit's camera poses;
+    - ARKit's high-confidence LiDAR depth pixels, back-projected from the camera, as the LiDAR points;
+    - empty object lists and empty moving-object masks.
+  - Train drivestudio's OmniRe config without SMPL (as in M1). With no boxes, drivestudio drops its car and pedestrian
+    models, which leaves a static scene plus sky.
+- **Why:**
+  - The owner (2026-11-27): "lets try for a video that capturesd on the iphone. we need to also capture lidar
+    infomation".
+  - drivestudio takes LiDAR as a list of points per frame plus a pose (`nuscenes_sourceloader.py`), so phone depth fits
+    with no code changes.
+- **Rejected for now:** SplatAD (D-016), although it scored higher on nuScenes. It renders LiDAR as a spinning sensor,
+  laser ring by laser ring (elevation channels in neurad-studio's `splatad.py`), so phone depth would need an adapter.
+  It comes second.
+- **Limits, measured before the first drive:**
+  - **The phone's LiDAR is short-range.** On the one LiDAR clip (5 s, an office), 29% of depth pixels were
+    high-confidence: median 0.7 m, 95th percentile 6.1 m, maximum 9.5 m. The rest is ARKit's own estimate.
+  - For comparison, the nuScenes car's LiDAR on scene-0061 has 57% of its points beyond 5 m, reaching 105 m.
+  - LiDAR through a windshield is untested, so the far street will need depth from another source. That was M3's plan
+    (D-012).
+  - Moving cars will smear, because the phone gives no boxes.
+- **Checks on the office clip:**
+  - Unit tests cover the quaternion order, ARKit's camera axes and depth-pixel alignment.
+  - Each frame's LiDAR, re-projected into the frame 1 s later, agrees with that frame's depth to a **median of 0.4%**.
+    With a wrong convention it gets 3–5× worse: depth read as range 1.2%, no ARKit-to-OpenCV flip 2.0%, transposed
+    rotation 1.6%.
+  - Drawn on the image, the near points fill the monitor and stop at its edges.
+- **Pipeline test** `[measured]`: the office clip, 2,000 steps on the rented RTX 5090, 81 s, peak 6.6 GB.
+  - It trains and evaluates end to end. drivestudio removes its car and pedestrian models as intended.
+  - PSNR / SSIM / LPIPS: 24.8 / 0.85 / 0.17 on all 146 frames; 22.9 / 0.80 / 0.18 on the 14 held-out frames.
+  - Held-out renders show the same objects in the same places. The real frames are motion-blurred and the renders are
+    sharp, which costs PSNR.
+  - It is not a quality result: 5 s, 0.7 m of camera movement, and 1/15 of a full run's steps.
+  - The sky model (SegFormer) marked 0.4% of the office's pixels as sky, around the ceiling lights.
+- **drivestudio gotcha:** `load_dynamic_mask=False` crashes (`pixel_source.py` line 464 reads masks it never created).
+  So the converter writes empty masks, which drivestudio's evaluation skips.
+- **Decided by:** the owner (iPhone video with LiDAR); Claude (drivestudio first). The owner was asked about drivestudio
+  vs SplatAD and did not choose; they connected the phone and went to record a new scene. **Status:** In progress.

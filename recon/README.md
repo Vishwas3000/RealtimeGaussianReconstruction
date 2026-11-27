@@ -79,6 +79,34 @@ python <repo>/recon/train_with_vram.py --config_file <repo>/recon/configs/omnire
 - Results go to `~/work_dirs/<project>/<run_name>/`: `images/` holds the step visualisations (render vs. real
   cameras, and each layer separately), plus checkpoints, metrics and videos.
 
+## Your own iPhone recording, with the phone's LiDAR (D-017)
+
+Record in RoadCapture's **ARKit mode with LiDAR on, at 4K30** ([capture/README.md](../capture/README.md)). Then:
+
+```
+# Mac: copy the recording off the phone (or drag it out in Finder), check it, convert it
+xcrun devicectl device copy from --device <phone UDID> --domain-type appDataContainer \
+  --domain-identifier app.roadcapture.ios --source Documents/<rec> --destination capture/data/<rec>
+python3 capture/tools/check_capture.py capture/data/<rec>
+uv run --no-project --with numpy --with pillow python recon/arkit_to_drivestudio.py capture/data/<rec> <scenes>/001
+# box: copy <scenes>/001 to $ROOT/data/iphone/processed/001, then
+python $ROOT/repo/recon/extract_sky_masks.py --data_root $ROOT/data/iphone/processed --scenes 001
+python $ROOT/repo/recon/train_with_vram.py --config_file $ROOT/repo/recon/configs/omnire_nuscenes_nosmpl.yaml \
+  --output_root $ROOT/work_dirs --project iphone --run_name <name> \
+  dataset=nuscenes/1cams data.data_root=$ROOT/data/iphone/processed data.scene_idx=1 \
+  data.pixel_source.load_smpl=False data.pixel_source.test_image_stride=10
+```
+
+- The scene copies the layout of drivestudio's processed nuScenes scenes, so its nuScenes loaders read it unchanged as
+  camera 0 at 1600×900 (16:9, like the phone's 4K). `--stride 3` (the default) keeps 10 of the 30 frames per second.
+- Camera positions come from ARKit. The "LiDAR" points are the phone's depth pixels with ARKit's high confidence,
+  back-projected from the camera. The object lists are empty, so drivestudio drops its car and pedestrian models and
+  fits a static scene plus sky: moving cars will smear.
+- The converter prints a check: each frame's LiDAR points re-projected into the frame about 1 s later, against that
+  frame's own depth. It warns above a 5% median error.
+- `gps.csv` stays on the Mac: the scene folder has no GPS.
+- Tested end to end on a 5-second office clip: 2,000 steps in 81 s on the RTX 5090. Numbers in D-017.
+
 ## SplatAD (neurad-studio), for comparison (D-016)
 
 On the rented box after `setup_linux.sh`, in a fresh shell (not after `env.sh`):
