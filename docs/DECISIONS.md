@@ -412,5 +412,19 @@ Every project decision, with its reason and what was rejected. Entries are never
     - Drawn over the redrawn image, the LiDAR depth fits the monitor, desk, chairs and people. This holds both on a
       median frame and on the frame furthest off (+5.8%).
     - Some frames are badly blurred where the phone moved close to things.
+  - **Training** `[measured]`: 324 frames (`--stride 6`, 4.5 fps), 30,000 steps on the rented RTX 5090, 15 min, peak
+    11.3 GB.
+    - PSNR / SSIM / LPIPS: 25.7 / 0.87 / 0.20 on all 324 frames; **19.6 / 0.72 / 0.30 on the 32 held-out frames**
+      (every 10th, from frame 10).
+    - The held-out score follows how far the nearest training frame is turned away (correlation −0.61). Within 5°,
+      19 frames average 24.8 dB; at 5° or more, 13 frames average about 19.7 dB. These per-frame numbers come from the
+      encoded comparison video, so they read higher than drivestudio's.
+    - The phone turned up to 26° between kept frames (about 120°/s), so `--stride 6` left gaps. How sharp the real
+      frame was did not matter (correlation −0.07).
+    - What fails is the far side of the room, beyond the LiDAR's few metres and seen only in quick turns: it breaks
+      into floating shards. Near objects (monitor, laptop, plant) and the long view to the windows render well.
+    - Export: 973 k splats, 31.1 MB. The `.splat` renders at 59.0 dB against the full-precision splats.
+  - **Next:** turn slowly, hold the phone in landscape and record at 4K30. Keep more frames (`--stride 3`). Depth from
+    another source for the background beyond the LiDAR's range (M3, D-012).
 - **Decided by:** the owner (iPhone video with LiDAR); Claude (drivestudio first). The owner was asked about drivestudio
   vs SplatAD and did not choose; they connected the phone and went to record a new scene. **Status:** In progress.
