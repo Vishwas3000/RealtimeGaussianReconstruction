@@ -9,7 +9,7 @@ The unmodified import is its own commit in this repository, so `git diff` agains
 
 - **Formats:** 4K30 (ARKit 6's 4K mode) or 1440p60. 4K falls back to 1440p60 on phones without it.
 - **Camera settings:**
-  - focus pinned at the far end of the lens;
+  - autofocus (pinned at the far end of the lens until 2026-11-27, which left anything near soft);
   - a Lock button: white balance locked, shutter at most 1/1000 s, ISO raised to keep brightness;
   - HDR off.
 - **LiDAR depth is optional and off by default**, so the app also runs on iPhones without LiDAR (it used to refuse).

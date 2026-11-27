@@ -230,6 +230,13 @@ Every project decision, with its reason and what was rejected. Entries are never
   for the loop test. Builds and signs on the Mac; not yet run on a phone.
 - **Update (2026-11-27):** LiDAR is switched on for the first reconstruction of the owner's own video, at the owner's
   request (D-017).
+- **Update (2026-11-27):** ARKit mode now uses autofocus instead of pinning focus at the far end of the lens, at the
+  owner's request ("auto focus is disabled for the arkit catures. enable t"). Pinned far, anything within a few metres
+  was soft, which matters for indoor and close-up recordings. Cost: refocusing changes the focal length, by up to 5.8%
+  in the first autofocus recording. ARKit writes the per-frame value to odometry.csv, and
+  `recon/arkit_to_drivestudio.py` redraws every frame for one shared camera (D-017). Lock still fixes only exposure
+  and white balance. If autofocus hunts behind a windshield, the next step is making Lock
+  freeze focus too, as Multi-lens mode's Lock does (D-014). **Decided by:** the owner.
 
 ## D-014: add a multi-lens capture mode; keep ARKit mode as the reference
 - **Decision:** add a second recording mode to RoadCapture, using AVFoundation's multi-camera session instead of ARKit:
@@ -388,5 +395,22 @@ Every project decision, with its reason and what was rejected. Entries are never
   - The sky model (SegFormer) marked 0.4% of the office's pixels as sky, around the ceiling lights.
 - **drivestudio gotcha:** `load_dynamic_mask=False` crashes (`pixel_source.py` line 464 reads masks it never created).
   So the converter writes empty masks, which drivestudio's evaluation skips.
+- **Update (2026-11-27): the first full recording**, `cf6c766c63` `[measured]`:
+  - A 72-s walk around the office: 22 m of camera path, phone held upright, ARKit tracking normal throughout.
+  - It was recorded at 1440p60 by mistake, not 4K30. With LiDAR on, ARKit delivered 30 fps, with 60 frames dropped.
+  - High-confidence LiDAR covered 52% of depth pixels: median 1.0 m, 95th percentile 4.4 m, maximum 10.3 m.
+  - It was the first recording with autofocus (D-013 update). The focal length varied by up to 5.8%. Only 53% of
+    frames were within 0.5% of the median; the outliers were stretches spent close to desks and chairs.
+  - **Converter changes:**
+    - 4:3 frames are squeezed to 1600×900, with separate horizontal and vertical focal lengths;
+    - every frame is redrawn for one shared camera, the median zoomed in by 6.0% so that no frame runs off its edges;
+    - each frame's LiDAR is back-projected with that frame's own focal length;
+    - the frame rate is measured from timestamps, not taken from capture_info.json, which said 60.
+  - **Checks:**
+    - LiDAR re-projected 5 frames (about 1 s) ahead agrees to a median of 1.02%, against 1.07% with one shared focal
+      length.
+    - Drawn over the redrawn image, the LiDAR depth fits the monitor, desk, chairs and people. This holds both on a
+      median frame and on the frame furthest off (+5.8%).
+    - Some frames are badly blurred where the phone moved close to things.
 - **Decided by:** the owner (iPhone video with LiDAR); Claude (drivestudio first). The owner was asked about drivestudio
   vs SplatAD and did not choose; they connected the phone and went to record a new scene. **Status:** In progress.

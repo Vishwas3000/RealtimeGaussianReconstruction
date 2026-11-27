@@ -81,7 +81,8 @@ python <repo>/recon/train_with_vram.py --config_file <repo>/recon/configs/omnire
 
 ## Your own iPhone recording, with the phone's LiDAR (D-017)
 
-Record in RoadCapture's **ARKit mode with LiDAR on, at 4K30** ([capture/README.md](../capture/README.md)). Then:
+Record in RoadCapture's **ARKit mode with LiDAR on**, at 4K30 if you can ([capture/README.md](../capture/README.md)).
+Then:
 
 ```
 # Mac: copy the recording off the phone (or drag it out in Finder), check it, convert it
@@ -98,7 +99,13 @@ python $ROOT/repo/recon/train_with_vram.py --config_file $ROOT/repo/recon/config
 ```
 
 - The scene copies the layout of drivestudio's processed nuScenes scenes, so its nuScenes loaders read it unchanged as
-  camera 0 at 1600×900 (16:9, like the phone's 4K). `--stride 3` (the default) keeps 10 of the 30 frames per second.
+  camera 0 at 1600×900. 4K30 (16:9) fits exactly. 1440p60 (4:3) is squeezed to fit, with separate horizontal and
+  vertical focal lengths.
+- With LiDAR on, "60 fps" delivers about 30. `--stride 3` (the default) keeps about 10 frames per second; a slow walk
+  needs fewer (`--stride 6`).
+- ARKit's focal length changes as autofocus moves the lens, by up to 5.8% in one walk. The converter redraws every
+  frame for one shared camera: the median, zoomed in just enough that no frame runs off its edges. Each frame's LiDAR
+  is back-projected with that frame's own focal length.
 - Camera positions come from ARKit. The "LiDAR" points are the phone's depth pixels with ARKit's high confidence,
   back-projected from the camera. The object lists are empty, so drivestudio drops its car and pedestrian models and
   fits a static scene plus sky: moving cars will smear.

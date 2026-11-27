@@ -5,7 +5,7 @@
 //  Created by Kenneth Blomqvist on 11/28/20.
 //  Copyright © 2020 Stray Robots. All rights reserved.
 //
-//  RoadCapture changes (TeslaRender D-013): 4K30 / 1440p60 formats, focus pinned far, a Lock button
+//  RoadCapture changes (TeslaRender D-013): 4K30 / 1440p60 formats, autofocus, a Lock button
 //  (white balance + short shutter), HDR off, optional LiDAR, GPS logging, a status line, and the
 //  screen kept awake while this view is open.
 //
@@ -172,7 +172,7 @@ class RecordSessionViewController : UIViewController, ARSessionDelegate, CLLocat
             captureMode = .hd60 // no 4K on this phone
             config.videoFormat = format
         }
-        config.isAutoFocusEnabled = false // fixed focus; pinned far once frames arrive
+        config.isAutoFocusEnabled = true // the owner's call (2026-11-27): focus pinned far left anything near soft
         if #available(iOS 16.0, *) {
             config.videoHDRAllowed = false // HDR tone mapping changes colours frame to frame
         }
@@ -191,21 +191,6 @@ class RecordSessionViewController : UIViewController, ARSessionDelegate, CLLocat
     private func restartSession() {
         session.pause()
         startSession()
-    }
-
-    /// Focus at the far end of the lens range: the road is metres to kilometres away.
-    private func focusFar() {
-        guard #available(iOS 16.0, *) else { return }
-        guard let device = ARWorldTrackingConfiguration.configurableCaptureDeviceForPrimaryCamera else { return }
-        do {
-            try device.lockForConfiguration()
-            if device.isLockingFocusWithCustomLensPositionSupported {
-                device.setFocusModeLocked(lensPosition: 1.0, completionHandler: nil)
-            }
-            device.unlockForConfiguration()
-        } catch let error {
-            print("Could not set focus. \(error.localizedDescription)")
-        }
     }
 
     /// Lock: white balance fixed and a shutter of at most 1/1000 s (ISO raised to keep the
@@ -457,7 +442,6 @@ class RecordSessionViewController : UIViewController, ARSessionDelegate, CLLocat
         if pendingCameraSetup {
             // Camera settings stick only once ARKit's capture session is running.
             pendingCameraSetup = false
-            focusFar()
             if cameraLocked {
                 applyCameraLock(true)
             }
